@@ -11,7 +11,8 @@
    - `git remote set-url origin repoKaLink`
    - `git pull origin master`
 4. Bas, is ke baad kaam start karo.
-
+5. To push your changes use
+      `git push origin master`
 ## How to Compile and Run the Code
 
 To compile the code first cd to the directory that contains the file that needs compiling and then run the following command:
