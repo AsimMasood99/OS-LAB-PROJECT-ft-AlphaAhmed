@@ -38,18 +38,17 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             FILE *file = fopen(path->valuestring, "rb");
             char *Msg = malloc(256);
             sprintf(Msg, "{\"command\":\"upload\",\"status\":\"incoming\", \"filename\":\"%s\"}", extract_filename(path->valuestring));
-
+            
             printf("killing command:%s", Msg);
             send(clinetSocket, Msg, strlen(Msg), 0);
             printf("Please wait while file is being uploded ...");
             while ((bytesRead = fread(stream, 1, sizeof(stream), file)) > 0)
             {
-                printf("%s\n",stream);
                 send(clinetSocket, stream, bytesRead, 0);
             }
 
             printf("File uploaded Successfully\n");
-            Msg = "{\"status\":\"success\"}";
+            Msg = "{\"status:success\"}";
             send(clinetSocket, Msg, strlen(Msg), 0);
         }
     }
@@ -105,10 +104,4 @@ int main()
             send(client_socket, parsedCommand, strlen(parsedCommand), 0);
         }
         int bytesRecievedFromServer = recv(client_socket, serverResponse, sizeof(serverResponse), 0);
-        printf("Server Response: %s\n", serverResponse);
-        processServerResponse(client_socket, serverResponse, parsedJsonCommand);
-    }
-    close(client_socket);
-    return 0;
-}
-// memcopy instead of strcpy
+        p
