@@ -7,7 +7,7 @@
 #include <arpa/inet.h>
 #include "parser.h"
 #include <cjson/cJSON.h>
-
+#include <string.h>
 char *extract_filename(char *path)
 {
 
@@ -42,14 +42,24 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             printf("killing command:%s", Msg);
             send(clinetSocket, Msg, strlen(Msg), 0);
             printf("Please wait while file is being uploded ...");
-            while ((bytesRead = fread(stream, 1, sizeof(stream), file)) > 0)
-            {
-                printf("%s\n",stream);
-                send(clinetSocket, stream, bytesRead, 0);
+            // while ((bytesRead = fread(stream, 1, sizeof(stream), file)) > 0)
+            // {
+            //     printf("%s\n",stream);
+            //     send(clinetSocket, stream, bytesRead, 0);
+            // }
+
+            while(fgets(stream,1024,file)!=NULL){
+                printf("%s",stream);
+                send(clinetSocket,stream,strlen(stream),0);
             }
 
-            printf("File uploaded Successfully\n");
+            // add an end of file dilimiter here as such the Msg below doesnt gets cut in 2 strings on server side .. on server i have same size buffer
+            
             Msg = "{\"status\":\"success\"}";
+            
+            
+            
+            printf("File uploaded Successfully\n");
             send(clinetSocket, Msg, strlen(Msg), 0);
         }
     }
