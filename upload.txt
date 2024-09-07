@@ -21,7 +21,6 @@ char *extract_filename(char *path)
     return last_slash + 1;
 }
 
-// checking if the server is ready to receive file and then send file
 void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
 {
     cJSON *responseJson = cJSON_Parse(response);
@@ -36,10 +35,6 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
         {
             int bytesRead = 0;
             char stream[1024];
-
-            //"ab" is the file mode:
-            // "a" (append): This mode opens the file in append mode. It creates the file if it doesn't exist, and if the file exists, it opens the file for writing at the end (appends to it).
-            // "b" (binary mode): Since this is binary mode, it treats the file as a binary file, not a text file, so it doesn’t process newline characters or encoding transformations (like \r\n on Windows).
             FILE *file = fopen(path->valuestring, "rb");
             char *Msg = malloc(256);
             sprintf(Msg, "{\"command\":\"upload\",\"status\":\"incoming\", \"filename\":\"%s\"}", extract_filename(path->valuestring));
@@ -66,10 +61,6 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             
             printf("File uploaded Successfully\n");
             send(clinetSocket, Msg, strlen(Msg), 0);
-        }
-        else if(strcmp(command->valuestring,"download")==0)
-        {
-            
         }
     }
 }
@@ -106,36 +97,8 @@ int main()
         printf("Enter Command: ");
         fgets(command, sizeof(command), stdin);
 
-        char *parsedCommand = malloc(256);    
-        PARSER(command, parsedCommand);    
+        char *parsedCommand = malloc(256);
+        PARSER(command, parsedCommand);
 
         // struct json_object *parsed_obj = json_tokener_parse(parsedCommand);
-        // struct json_object
-
-        // here we are parsing the returned json string and stored in json obj where we can excess its values
-        cJSON *parsedJsonCommand = cJSON_Parse(parsedCommand);
-
-        cJSON *error = cJSON_GetObjectItem(parsedJsonCommand, "error");
-        cJSON *command = cJSON_GetObjectItem(parsedJsonCommand, "command");
-        cJSON *path = cJSON_GetObjectItem(parsedJsonCommand, "path");
-        if (error)
-        {
-            printf("Error in command");
-        }
-        else
-        {
-            // if command is download then server then we have to send 
-            send(client_socket, parsedCommand, strlen(parsedCommand), 0);
-        }
-
-        int bytesRecievedFromServer = recv(client_socket, serverResponse, sizeof(serverResponse), 0);
-        printf("Server Response: %s\n", serverResponse);
-        processServerResponse(client_socket, serverResponse, parsedJsonCommand);
-    }
-    close(client_socket);
-    return 0;
-}
-// memcopy instead of strcpy
-
-
-
+      

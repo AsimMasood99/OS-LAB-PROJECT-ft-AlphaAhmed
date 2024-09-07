@@ -2,7 +2,7 @@
 ## Boys, I Suffered So You Don't Have To
 
 ## Getting Started
-(Bhai, Linux par hi kaam karna :) )
+(Bhai, Linux par hi kaam karna :) 
 
 1. Create a new folder.
 2. Open Terminal.
@@ -16,6 +16,9 @@
 ## How to Compile and Run the Code
 
 To compile the code first cd to the directory that contains the file that needs compiling and then run the following command:
+
+```bash
+gcc file.c -o file.elf
 
 ```bash
 gcc file.c -o file.elf
