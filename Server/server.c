@@ -139,16 +139,17 @@ int main()
                 char *send_filepath[255];
                 // file path on the server about to be sent to client
                 sprintf(send_filepath,"./Server/Storage/%s/%s",inet_ntoa(client_addr.sin_addr),SendingFile.filename);
-                FILE *file = fopen(send_filepath, "rb");
+                FILE *_file = fopen(send_filepath, "rb");
 
-                while(fgets(stream,1024,file)!=NULL){
-                printf("%s",stream);
-                send(server_socket,stream,strlen(stream),0);
-                
+                while(fgets(stream,1024,_file)!=NULL){
+                    printf("%s",stream);
+                    send(server_socket,stream,strlen(stream),0);
+                }
+                // this will happen when all files will be send    
                 char* completion_Msg = "{\"status\":\"success\"}";
                 printf("File uploaded Successfully\n");
+                SendingFile.isSending=0;
                 send(server_socket, completion_Msg, strlen(completion_Msg), 0);
-            }
             }   
             else
             {

@@ -8,6 +8,9 @@
 #include "parser.h"
 #include <cjson/cJSON.h>
 #include <string.h>
+
+int printInFileFlag= 0; // this flag will become 1 when the server is sending file data to client
+char *Filename;
 char *extract_filename(char *path)
 {
 
@@ -27,7 +30,7 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
     cJSON *responseJson = cJSON_Parse(response);
     cJSON *status = cJSON_GetObjectItem(responseJson, "status");
     cJSON *command = cJSON_GetObjectItem(responseJson, "command");
-
+    cJSON *_Filename = JSON_GetObjectItem(responseJson, "filename");
     if (strcmp(command->valuestring, "upload") == 0)
     {   
         printf("hi\n");
@@ -61,15 +64,43 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             // add an end of file dilimiter here as such the Msg below doesnt gets cut in 2 strings on server side .. on server i have same size buffer
             
             Msg = "{\"status\":\"success\"}";
-            
-            
-            
             printf("File uploaded Successfully\n");
             send(clinetSocket, Msg, strlen(Msg), 0);
         }
-        else if(strcmp(command->valuestring,"download")==0)
+        else if(strcmp(command->valuestring,"download")==0 || printInFileFlag==1)
         {
-            
+            if(printInFileFlag==1)
+            {
+                //+++++++++++++++++++++++++++++++++++++++++++++++++++
+                if(strcmp(status,"success")==0)
+                {
+                    printInFileFlag=0;
+                    printf("Closing\n");
+                }
+                if (strstr(response, "{\"status\":\"success\"}"))
+                {
+                    printInFileFlag=0;
+                    printf("Closing\n");
+                }
+                
+                FILE *file = fopen(Filename, "ab");
+                if (file)
+                {
+                    fprintf(file, "%s", response);
+                    fclose(file);
+                }
+                else
+                {
+                    perror("Error opening file for writing");
+                }
+            }
+            // this is just to 
+            else if(status->valuestring,"fetch" && printInFileFlag==0)
+            {   
+                printInFileFlag==1;
+                Filename=_Filename;
+                printf("Client is ready to download data!!!");
+            }
         }
     }
 }
