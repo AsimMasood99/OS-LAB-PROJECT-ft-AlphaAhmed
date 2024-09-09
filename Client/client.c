@@ -30,7 +30,11 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
     cJSON *responseJson = cJSON_Parse(response);
     cJSON *status = cJSON_GetObjectItem(responseJson, "status");
     cJSON *command = cJSON_GetObjectItem(responseJson, "command");
-    cJSON *_Filename = JSON_GetObjectItem(responseJson, "filename");
+    cJSON *_Filename = cJSON_GetObjectItem(responseJson, "filename");
+    if(strcmp(status->valuestring,"failed")==0)
+    {
+        printf("Filed error from server side\n");
+    }
     if (strcmp(command->valuestring, "upload") == 0)
     {   
         printf("hi\n");
@@ -72,7 +76,7 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             if(printInFileFlag==1)
             {
                 //+++++++++++++++++++++++++++++++++++++++++++++++++++
-                if(strcmp(status,"success")==0)
+                if(strcmp(status->valuestring,"success")==0)
                 {
                     printInFileFlag=0;
                     printf("Closing\n");
@@ -98,7 +102,7 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             else if(status->valuestring,"fetch" && printInFileFlag==0)
             {   
                 printInFileFlag==1;
-                Filename=_Filename;
+                Filename=_Filename->valuestring;
                 printf("Client is ready to download data!!!");
             }
         }
@@ -147,7 +151,6 @@ int main()
         cJSON *parsedJsonCommand = cJSON_Parse(parsedCommand);
 
         cJSON *error = cJSON_GetObjectItem(parsedJsonCommand, "error");
-        cJSON *command = cJSON_GetObjectItem(parsedJsonCommand, "command");
         cJSON *path = cJSON_GetObjectItem(parsedJsonCommand, "path");
         if (error)
         {

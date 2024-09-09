@@ -113,6 +113,8 @@ int main()
                 // {\"status\":\"success\"} is the sub-string to be searched in string.
 
                 // here we are closing the file..
+
+
                 if (strstr(buffer, "{\"status\":\"success\"}"))
                 {
                     receivingFile.receiving = 0;
@@ -136,7 +138,7 @@ int main()
             {
                 int bytesRead = 0;
                 char stream[1024];
-                char *send_filepath[255];
+                char send_filepath[256];
                 // file path on the server about to be sent to client
                 sprintf(send_filepath,"./Server/Storage/%s/%s",inet_ntoa(client_addr.sin_addr),SendingFile.filename);
                 FILE *_file = fopen(send_filepath, "rb");
@@ -194,28 +196,32 @@ int main()
                 else if(commandType && strcmp(commandType->valuestring, "download") == 0)
                 {
                     cJSON *fileToCheck= cJSON_GetObjectItem(jsonCommand,"path");
-                    char folder_and_file_name[256] = "./Server/Storage/";
+                    char folder_and_file_name[512];
+
                     // changes IP of client from int to string and then concatinates clients IP address number (string) with folder name.
-                    strcat(folder_and_file_name, inet_ntoa(client_addr.sin_addr));
+                    snprintf(folder_and_file_name, sizeof(folder_and_file_name), "./Server/Storage/%s", inet_ntoa(client_addr.sin_addr));
+                    //strcat(folder_and_file_name, inet_ntoa(client_addr.sin_addr));
                     
                     // Appending the "client.txt" to the folder path
-                    sprintf(folder_and_file_name, "%s/%s", folder_and_file_name, fileToCheck);
+                    strncat(folder_and_file_name, "/", sizeof(folder_and_file_name) - strlen(folder_and_file_name) - 1);
+                    strncat(folder_and_file_name, fileToCheck->valuestring, sizeof(folder_and_file_name) - strlen(folder_and_file_name) - 1);
+
+                    //snprintf(folder_and_file_name, sizeof(folder_and_file_name), "%s/%s", folder_and_file_name, fileToCheck->valuestring);
 
                     // Check if the file exists using access() with F_OK (File OK)
                     if(access(folder_and_file_name,F_OK)==0)
                     {
-                        // char* download_response = "{\"status\":\"fetch\",\"command\":\"download\",\"filename\":\"%s\"}",fileToCheck;
-                        // send(new_socket, download_response, strlen(download_response), 0);
-
                         char download_response[256];  // Allocate enough space for the formatted string
-                        sprintf(download_response, "{\"status\":\"fetch\",\"command\":\"download\",\"filename\":\"%s\"}", fileToCheck);
+                        sprintf(download_response, "{\"status\":\"fetch\",\"command\":\"download\",\"filename\":\"%s\"}", fileToCheck->valuestring);
                         // Now send the formatted response
                         send(new_socket, download_response, strlen(download_response), 0);
-                        sendFileToClient();
+                        
                     }
                     else
                     {
-                        printf("File %s is not available on server\n", fileToCheck);
+                        printf("File %s is not available on server\n", fileToCheck->valuestring);
+                        char *failed_responce = "{\"status\":\"failed\"}";
+                        send(new_socket, failed_responce, strlen(failed_responce), 0);
                     }
 
                 }
