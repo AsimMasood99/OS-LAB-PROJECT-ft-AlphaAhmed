@@ -7,7 +7,6 @@
 #include <arpa/inet.h>
 #include <cjson/cJSON.h>
 #include <sys/stat.h>
-
 int isSpaceAvailable(const char *path, int maxSpace)
 {
     return 1;
@@ -38,7 +37,6 @@ int main()
     struct isRecievingFile receivingFile = {0, NULL};
     struct isSendingFile SendingFile = {0, NULL};
     struct sockaddr_in server_addr, client_addr;
-    int sending_to_server=0;
     char buffer[1024];
 
     // Create a socket
@@ -87,8 +85,15 @@ int main()
         while (1)
         {
             memset(buffer, 0, sizeof(buffer));
+            int bytes_received=1;
             // here is where we are receiving data from client (both command and files)
-            int bytes_received = recv(new_socket, buffer, sizeof(buffer) - 1, 0);
+            if(SendingFile.isSending==0)
+            {
+                printf("Listening\n");
+                bytes_received = recv(new_socket, buffer, sizeof(buffer) - 1, 0);
+            }
+            
+            //printf("buffer %s\n",buffer);
             if (bytes_received <= 0)
             {
                 if (bytes_received == 0)
@@ -136,22 +141,33 @@ int main()
             } // this else if is for sending file to the client
             else if(SendingFile.isSending==1)
             {
+                printf("Sending file\n");
                 int bytesRead = 0;
                 char stream[1024];
-                char send_filepath[256];
+                //char send_filepath[256];
                 // file path on the server about to be sent to client
-                sprintf(send_filepath,"./Server/Storage/%s/%s",inet_ntoa(client_addr.sin_addr),SendingFile.filename);
-                FILE *_file = fopen(send_filepath, "rb");
-
-                while(fgets(stream,1024,_file)!=NULL){
-                    printf("%s",stream);
-                    send(server_socket,stream,strlen(stream),0);
+                //sprintf(send_filepath,"./Server/Storage/%s/%s",inet_ntoa(client_addr.sin_addr),SendingFile.filename);
+                FILE *_file = fopen(SendingFile.filename, "rb");
+                if(_file!=NULL)
+                {
+                    printf("File downloading in progress\n");
+                    while(fgets(stream,1024,_file)!=NULL){
+                        printf("%s",stream);
+                        send(server_socket,stream,strlen(stream),0);
+                    }
+                    // this will happen when all files will be send    
+                    char* completion_Msg = "{\"status\":\"success\"}";
+                    printf("File uploaded Successfully\n");
+                    SendingFile.isSending=0;
+                    send(server_socket, completion_Msg, strlen(completion_Msg), 0);
                 }
-                // this will happen when all files will be send    
-                char* completion_Msg = "{\"status\":\"success\"}";
-                printf("File uploaded Successfully\n");
-                SendingFile.isSending=0;
-                send(server_socket, completion_Msg, strlen(completion_Msg), 0);
+                else
+                {
+                    SendingFile.isSending=0;
+                    printf("Code RED abort\n");
+                }
+                
+                
             }   
             else
             {
@@ -195,26 +211,36 @@ int main()
                 } // this else if is for download command 
                 else if(commandType && strcmp(commandType->valuestring, "download") == 0)
                 {
-                    cJSON *fileToCheck= cJSON_GetObjectItem(jsonCommand,"path");
-                    char folder_and_file_name[512];
+                    cJSON *fileToCheck= cJSON_GetObjectItem(jsonCommand,"filename"); // jahaz ider filename ana tha
+                    char folder_and_file_name[1024];
 
                     // changes IP of client from int to string and then concatinates clients IP address number (string) with folder name.
                     snprintf(folder_and_file_name, sizeof(folder_and_file_name), "./Server/Storage/%s", inet_ntoa(client_addr.sin_addr));
-                    //strcat(folder_and_file_name, inet_ntoa(client_addr.sin_addr));
+                    
                     
                     // Appending the "client.txt" to the folder path
-                    strncat(folder_and_file_name, "/", sizeof(folder_and_file_name) - strlen(folder_and_file_name) - 1);
-                    strncat(folder_and_file_name, fileToCheck->valuestring, sizeof(folder_and_file_name) - strlen(folder_and_file_name) - 1);
-
+                    if (fileToCheck != NULL) {
+                        strncat(folder_and_file_name, "/", sizeof(folder_and_file_name) - strlen(folder_and_file_name) - 1);
+                        strncat(folder_and_file_name, fileToCheck->valuestring, sizeof(folder_and_file_name) - strlen(folder_and_file_name) - 1);
+                    } else {
+                        printf("Error: fileToCheck->valuestring is NULL\n");
+                        char *failed_responce = "{\"status\":\"failed\"}";
+                        send(new_socket, failed_responce, strlen(failed_responce), 0);
+                        // Handle the error
+                    }                    
                     //snprintf(folder_and_file_name, sizeof(folder_and_file_name), "%s/%s", folder_and_file_name, fileToCheck->valuestring);
 
                     // Check if the file exists using access() with F_OK (File OK)
+                    //printf("Path: %s\n", folder_and_file_name);
                     if(access(folder_and_file_name,F_OK)==0)
                     {
                         char download_response[256];  // Allocate enough space for the formatted string
                         sprintf(download_response, "{\"status\":\"fetch\",\"command\":\"download\",\"filename\":\"%s\"}", fileToCheck->valuestring);
+                        SendingFile.filename=folder_and_file_name;
+                        SendingFile.isSending=1;
                         // Now send the formatted response
                         send(new_socket, download_response, strlen(download_response), 0);
+                        printf("Starting to send file\n");
                         
                     }
                     else
