@@ -35,20 +35,16 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
     cJSON *_Filename = cJSON_GetObjectItem(responseJson, "filename");
     printf("Count it came in %i\n",count_it_came_in);
     count_it_came_in++;
-    if(count_it_came_in==3)
+    if(count_it_came_in>=3)
     {
         printf("File content : %s\n",response);
         printf("Flag condition %i\n",printInFileFlag);
     }
-    // if(command!=NULL)
-    // {
-    //     printf("\n Commad : %s\n", command->valuestring);
-    // }
-    if (strcmp(status->valuestring, "failed") == 0)
+    if (status!=NULL && strcmp(status->valuestring, "failed") == 0)
     {
         printf("Filed error from server side\n");
     }
-    if (strcmp(command->valuestring, "upload") == 0)
+    if (command!=NULL && strcmp(command->valuestring, "upload") == 0)
     {
         printf("reaching upload if\n");
         printf("hi\n");
@@ -60,7 +56,7 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             //"ab" is the file mode:
             // "a" (append): This mode opens the file in append mode. It creates the file if it doesn't exist, and if the file exists, it opens the file for writing at the end (appends to it).
             // "b" (binary mode): Since this is binary mode, it treats the file as a binary file, not a text file, so it doesn’t process newline characters or encoding transformations (like \r\n on Windows).
-            FILE *file = fopen(path->valuestring, "wb");
+            FILE *file = fopen(path->valuestring, "ab");
             char *Msg = malloc(1024);
             sprintf(Msg, "{\"command\":\"upload\",\"status\":\"incoming\", \"filename\":\"%s\"}", extract_filename(path->valuestring));
 
@@ -78,7 +74,7 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
                 printf("%s", stream);
                 send(clinetSocket, stream, strlen(stream), 0);
             }
-            
+
             // add an end of file dilimiter here as such the Msg below doesnt gets cut in 2 strings on server side .. on server i have same size buffer
 
             Msg = "{\"status\":\"success\"}";
@@ -86,7 +82,7 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             send(clinetSocket, Msg, strlen(Msg), 0);
         }
     }
-    else if (strcmp(command->valuestring, "download") == 0 || printInFileFlag == 1)
+    if (printInFileFlag == 1 || (command !=NULL && strcmp(command->valuestring, "download") == 0))
     {
         printf("Reached the download if\n");
         if (printInFileFlag == 1)
@@ -106,7 +102,7 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             else
             {
                 printf("File name in which client is about to write: %s\n",Filename);
-                FILE *file = fopen(Filename, "rb");
+                FILE *file = fopen(Filename, "wb");
                 if (file)
                 {
                     fprintf(file, "%s", response);
