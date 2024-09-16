@@ -95,7 +95,7 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             }
             else
             {
-                FILE *file = fopen(Filename, "ab");
+                FILE *file = fopen(Filename, "rb");
                 if (file)
                 {
                     fprintf(file, "%s", response);
@@ -108,7 +108,7 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             }
         }
         // this is just to
-        else if (status->valuestring, "fetch" && printInFileFlag == 0)
+        else if (strcmp(status->valuestring, "fetch") ==0 && printInFileFlag == 0)
         {
             // char *Msg = malloc(256);
             printf("Printing Flag turned on\n");

@@ -25,12 +25,6 @@ struct isSendingFile
 };
 
 
-void sendFileToClient()
-{
-    
-}
-
-
 int main()
 {
     int server_socket, new_socket, client_addr_len;
@@ -151,15 +145,16 @@ int main()
                 if(_file!=NULL)
                 {
                     printf("File downloading in progress\n");
+                    printf("File name: %s \n",SendingFile.filename);
                     while(fgets(stream,1024,_file)!=NULL){
                         printf("%s",stream);
-                        send(server_socket,stream,strlen(stream),0);
-                    }
+                        send(new_socket, stream, sizeof(stream), 0);
+                    }   
                     // this will happen when all files will be send    
                     char* completion_Msg = "{\"status\":\"success\"}";
                     printf("File uploaded Successfully\n");
                     SendingFile.isSending=0;
-                    send(server_socket, completion_Msg, strlen(completion_Msg), 0);
+                    send(new_socket, completion_Msg, strlen(completion_Msg), 0);
                 }
                 else
                 {
@@ -240,6 +235,7 @@ int main()
                         SendingFile.isSending=1;
                         // Now send the formatted response
                         send(new_socket, download_response, strlen(download_response), 0);
+                        //memset(download_response, 0, sizeof(download_response));
                         printf("Starting to send file\n");
                         
                     }
