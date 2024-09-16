@@ -83,7 +83,6 @@ int main()
             // here is where we are receiving data from client (both command and files)
             if(SendingFile.isSending==0)
             {
-                printf("Listening\n");
                 bytes_received = recv(new_socket, buffer, sizeof(buffer) - 1, 0);
             }
             
@@ -193,9 +192,8 @@ int main()
                     if (status && strcmp(status->valuestring, "incoming") == 0)
                     {
                         receivingFile.receiving = 1;
-
-                        receivingFile.filename = cJSON_GetObjectItem(jsonCommand, "filename")->valuestring;
-                        ;
+                        receivingFile.filename = malloc(strlen(folder_name) + strlen(cJSON_GetObjectItem(jsonCommand, "filename")->valuestring) + 2);
+                        sprintf(receivingFile.filename,"%s/%s",folder_name,cJSON_GetObjectItem(jsonCommand, "filename")->valuestring);
                         continue;
                     }
                     else
