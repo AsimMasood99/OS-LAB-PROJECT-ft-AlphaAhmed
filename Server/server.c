@@ -76,7 +76,7 @@ int main()
         printf("Client connected: %s\n", inet_ntoa(client_addr.sin_addr));
 
         // Receive data from the client
-        while (1)
+        while (1)   
         {
             memset(buffer, 0, sizeof(buffer));
             int bytes_received=1;

@@ -12,6 +12,7 @@
 int printInFileFlag = 0; // this flag will become 1 when the server is sending file data to client
 char *Filename;
 int just_keep_printing = 0; // this bool is 1 when the server is sending the files data to client so the client will not take any commands
+int count_it_came_in=1;
 char *extract_filename(char *path)
 {
 
@@ -32,7 +33,17 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
     cJSON *status = cJSON_GetObjectItem(responseJson, "status");
     cJSON *command = cJSON_GetObjectItem(responseJson, "command");
     cJSON *_Filename = cJSON_GetObjectItem(responseJson, "filename");
-    printf("\n Commad : %s\n", command->valuestring);
+    printf("Count it came in %i\n",count_it_came_in);
+    count_it_came_in++;
+    if(count_it_came_in==3)
+    {
+        printf("File content : %s\n",response);
+        printf("Flag condition %i\n",printInFileFlag);
+    }
+    // if(command!=NULL)
+    // {
+    //     printf("\n Commad : %s\n", command->valuestring);
+    // }
     if (strcmp(status->valuestring, "failed") == 0)
     {
         printf("Filed error from server side\n");
@@ -46,12 +57,11 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
         {
             int bytesRead = 0;
             char stream[1024];
-
             //"ab" is the file mode:
             // "a" (append): This mode opens the file in append mode. It creates the file if it doesn't exist, and if the file exists, it opens the file for writing at the end (appends to it).
             // "b" (binary mode): Since this is binary mode, it treats the file as a binary file, not a text file, so it doesn’t process newline characters or encoding transformations (like \r\n on Windows).
-            FILE *file = fopen(path->valuestring, "rb");
-            char *Msg = malloc(256);
+            FILE *file = fopen(path->valuestring, "wb");
+            char *Msg = malloc(1024);
             sprintf(Msg, "{\"command\":\"upload\",\"status\":\"incoming\", \"filename\":\"%s\"}", extract_filename(path->valuestring));
 
             printf("killing command:%s", Msg);
@@ -68,7 +78,7 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
                 printf("%s", stream);
                 send(clinetSocket, stream, strlen(stream), 0);
             }
-
+            
             // add an end of file dilimiter here as such the Msg below doesnt gets cut in 2 strings on server side .. on server i have same size buffer
 
             Msg = "{\"status\":\"success\"}";
@@ -95,6 +105,7 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             }
             else
             {
+                printf("File name in which client is about to write: %s\n",Filename);
                 FILE *file = fopen(Filename, "rb");
                 if (file)
                 {
@@ -104,6 +115,7 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
                 else
                 {
                     perror("Error opening file for writing");
+                    printInFileFlag = 0;
                 }
             }
         }
@@ -114,7 +126,7 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             printf("Printing Flag turned on\n");
             printInFileFlag =1;
             Filename = _Filename->valuestring;
-            printf("Client is ready to download data!!!");
+            printf("Client is ready to download data!!!\n");
             // sprintf(Msg, "{\"command\":\"download\",\"status\":\"ReadyToReceive");
             // send(clinetSocket,Msg,strlen(Msg),0);
         }
@@ -152,7 +164,7 @@ int main()
 
     while (1)
     {
-        char serverResponse[1024];
+        char serverResponse[4086];
         char command[256];
         char *parsedCommand=NULL;
         cJSON *parsedJsonCommand=NULL;
@@ -184,9 +196,22 @@ int main()
                 send(client_socket, parsedCommand, strlen(parsedCommand), 0);
             }
         }
-        int bytesRecievedFromServer = recv(client_socket, serverResponse, sizeof(serverResponse), 0);
+        free(parsedCommand);
+        int bytesRecievedFromServer = recv(client_socket, serverResponse, sizeof(serverResponse)-1, 0);
         //printf("Server Response: %s\n", serverResponse);
-        processServerResponse(client_socket, serverResponse, parsedJsonCommand);
+        if (bytesRecievedFromServer > 0) {
+            serverResponse[bytesRecievedFromServer] = '\0';  // Null-terminate the response
+            processServerResponse(client_socket, serverResponse, parsedJsonCommand);
+        }
+        else if (bytesRecievedFromServer == 0) {
+            printf("Server closed connection\n");
+            break;  // Exit the loop when the server closes the connection
+        }
+        else {
+            perror("recv failed");
+            break;  // Exit the loop on recv error
+        }
+        cJSON_Delete(parsedJsonCommand);
     }
     printf("Client Socket got disconnected due to error in Command Passed\n");
     close(client_socket);
