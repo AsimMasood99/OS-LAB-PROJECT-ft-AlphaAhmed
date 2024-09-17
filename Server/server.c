@@ -16,6 +16,7 @@ struct isRecievingFile
 {
     int receiving;
     char *filename;
+    int fileSize;
 };
 
 struct isSendingFile
@@ -24,7 +25,7 @@ struct isSendingFile
     char *filename;
 };
 
-
+#define BUFFERSIZE = 1024;
 int main()
 {
     int server_socket, new_socket, client_addr_len;
@@ -74,6 +75,7 @@ int main()
         }
 
         printf("Client connected: %s\n", inet_ntoa(client_addr.sin_addr));
+        int file_bytes = 0;
 
         // Receive data from the client
         while (1)
@@ -113,23 +115,27 @@ int main()
                 // here we are closing the file..
 
 
+                
+                FILE *file = fopen(receivingFile.filename, "ab");
+                if(!file)
+                {
+                    perror("Error in openinig file: ");
+                }
+                if (file && file_bytes<receivingFile.fileSize)
+                {
+                    // fwrite(buffer, 1, bytes_received, file);
+                    printf("\nbam: %i\n",receivingFile.fileSize-file_bytes>1024?1024:receivingFile.fileSize-file_bytes);
+                    fwrite(buffer,1,receivingFile.fileSize-file_bytes>1024?1024:receivingFile.fileSize-file_bytes,file);
+                    file_bytes+=bytes_received;
+                    fclose(file);
+                }
                 if (strstr(buffer, "{\"status\":\"success\"}"))
                 {
                     receivingFile.receiving = 0;
+                    receivingFile.fileSize = 0;
+                    file_bytes = 0;
                     printf("Closing\n");
                     continue;
-                }
-                
-                FILE *file = fopen(receivingFile.filename, "ab");
-                if (file)
-                {
-                    // fwrite(buffer, 1, bytes_received, file);
-                    fprintf(file, "%s", buffer);
-                    fclose(file);
-                }
-                else
-                {
-                    perror("Error opening file for writing");
                 }
             } // this else if is for sending file to the client
             else if(SendingFile.isSending==1)
@@ -191,9 +197,12 @@ int main()
                     // this status means that file is ready and is coming
                     if (status && strcmp(status->valuestring, "incoming") == 0)
                     {
+                        printf("%s\n",cJSON_Print(jsonCommand));
                         receivingFile.receiving = 1;
                         receivingFile.filename = malloc(strlen(folder_name) + strlen(cJSON_GetObjectItem(jsonCommand, "filename")->valuestring) + 2);
                         sprintf(receivingFile.filename,"%s/%s",folder_name,cJSON_GetObjectItem(jsonCommand, "filename")->valuestring);
+                        receivingFile.fileSize = atoi(cJSON_GetObjectItem(jsonCommand, "filesize")->valuestring);
+                        printf("%i",receivingFile.fileSize);
                         continue;
                     }
                     else

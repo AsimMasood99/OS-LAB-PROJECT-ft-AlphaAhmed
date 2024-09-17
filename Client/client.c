@@ -25,6 +25,13 @@ char *extract_filename(char *path)
     return last_slash + 1;
 }
 
+int getFileSize(char *path)
+{
+    struct stat fileInfo;
+    stat(path, &fileInfo);
+    return fileInfo.st_size;
+}
+
 // checking if the server is ready to receive file and then send file
 void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
 {
@@ -52,7 +59,7 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             // "b" (binary mode): Since this is binary mode, it treats the file as a binary file, not a text file, so it doesn’t process newline characters or encoding transformations (like \r\n on Windows).
             FILE *file = fopen(path->valuestring, "rb");
             char *Msg = malloc(256);
-            sprintf(Msg, "{\"command\":\"upload\",\"status\":\"incoming\", \"filename\":\"%s\"}", extract_filename(path->valuestring));
+            sprintf(Msg, "{\"command\":\"upload\",\"status\":\"incoming\", \"filename\":\"%s\",\"filesize\":\"%i\"}", extract_filename(path->valuestring),getFileSize(path->valuestring));
 
             printf("killing command:%s", Msg);
             send(clinetSocket, Msg, strlen(Msg), 0);
@@ -108,11 +115,11 @@ void processServerResponse(int clinetSocket, char *response, cJSON *commandJson)
             }
         }
         // this is just to
-        else if (strcmp(status->valuestring, "fetch") ==0 && printInFileFlag == 0)
+        else if (strcmp(status->valuestring, "fetch") == 0 && printInFileFlag == 0)
         {
             // char *Msg = malloc(256);
             printf("Printing Flag turned on\n");
-            printInFileFlag =1;
+            printInFileFlag = 1;
             Filename = _Filename->valuestring;
             printf("Client is ready to download data!!!");
             // sprintf(Msg, "{\"command\":\"download\",\"status\":\"ReadyToReceive");
@@ -154,8 +161,8 @@ int main()
     {
         char serverResponse[1024];
         char command[256];
-        char *parsedCommand=NULL;
-        cJSON *parsedJsonCommand=NULL;
+        char *parsedCommand = NULL;
+        cJSON *parsedJsonCommand = NULL;
         if (printInFileFlag == 0)
         {
             // getting command from user
@@ -170,22 +177,18 @@ int main()
 
             // here we are parsing the returned json string and stored in json obj where we can excess its values
             parsedJsonCommand = cJSON_Parse(parsedCommand);
-
+            cJSON *commandType = cJSON_GetObjectItem(parsedJsonCommand, "command");
             cJSON *error = cJSON_GetObjectItem(parsedJsonCommand, "error");
             cJSON *path = cJSON_GetObjectItem(parsedJsonCommand, "path");
             if (error)
             {
                 printf("Error in command\n");
-                break;
+                continue;
             }
-            else
-            {
-                // if command is download then server then we have to send
-                send(client_socket, parsedCommand, strlen(parsedCommand), 0);
-            }
+            send(client_socket, parsedCommand, strlen(parsedCommand), 0);
         }
         int bytesRecievedFromServer = recv(client_socket, serverResponse, sizeof(serverResponse), 0);
-        //printf("Server Response: %s\n", serverResponse);
+        // printf("Server Response: %s\n", serverResponse);
         processServerResponse(client_socket, serverResponse, parsedJsonCommand);
     }
     printf("Client Socket got disconnected due to error in Command Passed\n");
