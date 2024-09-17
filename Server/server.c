@@ -29,7 +29,7 @@ struct isSendingFile
 int main()
 {
     int server_socket, new_socket, client_addr_len;
-    struct isRecievingFile receivingFile = {0, NULL};
+    struct isRecievingFile receivingFile = {0, NULL,0};
     struct isSendingFile SendingFile = {0, NULL};
     struct sockaddr_in server_addr, client_addr;
     char buffer[1024];
