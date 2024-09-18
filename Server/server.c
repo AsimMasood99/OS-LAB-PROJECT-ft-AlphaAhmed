@@ -125,7 +125,7 @@ int main()
                 {
                     // fwrite(buffer, 1, bytes_received, file);
                     printf("\nbam: %i\n",receivingFile.fileSize-file_bytes>1024?1024:receivingFile.fileSize-file_bytes);
-                    fwrite(buffer,1,receivingFile.fileSize-file_bytes>1024?1024:receivingFile.fileSize-file_bytes,file);
+                    fwrite(buffer,1,receivingFile.fileSize-file_bytes>1023?1023:receivingFile.fileSize-file_bytes-1,file);
                     file_bytes+=bytes_received;
                     fclose(file);
                 }
