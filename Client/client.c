@@ -130,7 +130,7 @@ int main()
 
     while (1)
     {
-        char serverResponse[1024];
+        char serverResponse[4086];
         char command[256];
         char *parsedCommand = NULL;
         cJSON *parsedJsonCommand = NULL;

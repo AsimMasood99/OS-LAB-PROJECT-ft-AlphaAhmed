@@ -160,7 +160,7 @@ int main()
         int file_bytes = 0;
 
         // Receive data from the client
-        while (1)
+        while (1)   
         {
             memset(buffer, 0, sizeof(buffer));
             int bytes_received = 1;
