@@ -109,58 +109,10 @@ void handel_download(int socket, cJSON *command, char *ip)
     }
 }
 
-int main()
+void client_handler_function( char buffer[1024] , int file_bytes  ,int new_socket ,struct Recieving_File receivingFile , int server_socket ,  struct sockaddr_in client_addr)
 {
-    int server_socket, new_socket, client_addr_len;
-    struct Recieving_File receivingFile = {0, NULL, 0};
-    struct sockaddr_in server_addr, client_addr;
-    char buffer[1024];
-
-    // Create a socket
-    server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_socket < 0)
-    {
-        perror("Error creating socket");
-        exit(EXIT_FAILURE);
-    }
-
-    // Set server address and port
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(3001); // Replace with desired port
-
-    // Bind the socket to the address and port
-    if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
-    {
-        perror("Error binding socket");
-        exit(EXIT_FAILURE);
-    }
-
-    // Listen for incoming connections
-    if (listen(server_socket, 5) < 0)
-    {
-        perror("Error listening on socket");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("Server listening on port 3001...\n");
-
-    // Accept connections
-    while (1)
-    {
-        client_addr_len = sizeof(client_addr);
-        new_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_addr_len);
-        if (new_socket < 0)
-        {
-            perror("Error accepting connection");
-            exit(EXIT_FAILURE);
-        }
-
-        printf("Client connected: %s\n", inet_ntoa(client_addr.sin_addr));
-        int file_bytes = 0;
-
-        // Receive data from the client
-        while (1)   
+    
+  while (1)   
         {
             memset(buffer, 0, sizeof(buffer));
             int bytes_received = 1;
@@ -226,6 +178,61 @@ int main()
                 cJSON_Delete(jsonCommand);
             }
         }
+
+}
+
+int main()
+{
+    int server_socket, new_socket, client_addr_len;
+    struct Recieving_File receivingFile = {0, NULL, 0};
+    struct sockaddr_in server_addr, client_addr;
+    char buffer[1024];
+
+    // Create a socket
+    server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_socket < 0)
+    {
+        perror("Error creating socket");
+        exit(EXIT_FAILURE);
+    }
+
+    // Set server address and port
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(3001); // Replace with desired port
+
+    // Bind the socket to the address and port
+    if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
+        perror("Error binding socket");
+        exit(EXIT_FAILURE);
+    }
+
+    // Listen for incoming connections
+    if (listen(server_socket, 5) < 0)
+    {
+        perror("Error listening on socket");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Server listening on port 3001...\n");
+
+    // Accept connections
+    while (1)
+    {
+        client_addr_len = sizeof(client_addr);
+        new_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_addr_len);
+        if (new_socket < 0)
+        {
+            perror("Error accepting connection");
+            exit(EXIT_FAILURE);
+        }
+
+        printf("Client connected: %s\n", inet_ntoa(client_addr.sin_addr));
+        int file_bytes = 0;
+
+        // Receive data from the client
+      
     }
 
     return 0;
