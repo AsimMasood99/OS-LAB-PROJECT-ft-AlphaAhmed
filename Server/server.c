@@ -7,6 +7,10 @@
 #include <arpa/inet.h>
 #include <cjson/cJSON.h>
 #include <sys/stat.h>
+#include <pthread.h>
+
+#define NUM_THREADS 10
+
 
 struct Recieving_File
 {
@@ -14,6 +18,22 @@ struct Recieving_File
     char *filename;
     int fileSize;
 };
+
+struct thread_info {
+    int thread_id;
+    int is_running;
+    char buffer[1024] ;
+    int file_bytes ;
+    int new_socket ;
+    struct Recieving_File receivingFile;
+    int server_socket ;
+    struct sockaddr_in client_addr;
+};
+
+ pthread_t threads[NUM_THREADS];
+ struct thread_info threadInfos[NUM_THREADS];
+
+
 
 int isSpaceAvailable(const char *path, int maxSpace)
 {
@@ -109,15 +129,24 @@ void handel_download(int socket, cJSON *command, char *ip)
     }
 }
 
-void client_handler_function( char buffer[1024] , int file_bytes  ,int new_socket ,struct Recieving_File receivingFile , int server_socket ,  struct sockaddr_in client_addr)
+
+
+
+
+
+
+void client_handler_function(void * arg)
 {
-    
+    //char buffer[1024] , int file_bytes  ,int new_socket ,struct Recieving_File receivingFile , int server_socket ,  struct sockaddr_in client_addr
+
+   struct thread_info* info = (struct thread_info*)arg;
+   
   while (1)   
         {
-            memset(buffer, 0, sizeof(buffer));
+            memset(info->buffer, 0, sizeof(info->buffer));
             int bytes_received = 1;
             
-            bytes_received = recv(new_socket, buffer, sizeof(buffer) - 1, 0);
+            bytes_received = recv(info->new_socket, info->buffer, sizeof(info->buffer) - 1, 0);
             
             if (bytes_received <= 0)
             {
@@ -129,30 +158,31 @@ void client_handler_function( char buffer[1024] , int file_bytes  ,int new_socke
                 {
                     perror("Error receiving data");
                 }
-                close(new_socket);
-                break;
+                close(info->new_socket);
+                info->is_running=0;
+                break;                                       //return 
             }
 
-            buffer[bytes_received] = '\0';
+            info->buffer[bytes_received] = '\0';
 
-            if (receivingFile.receiving)
+            if (info->receivingFile.receiving)
             {
-                printf("reviing: %s\n", buffer);
+                printf("reviing: %s\n", info->buffer);
             
-                recieve_file(buffer, receivingFile.filename, receivingFile.fileSize, &file_bytes, bytes_received);
+                recieve_file(info->buffer, info->receivingFile.filename, info->receivingFile.fileSize, &info->file_bytes, bytes_received);
                 
-                if (strstr(buffer, "{\"status\":\"success\"}"))
+                if (strstr(info->buffer, "{\"status\":\"success\"}"))
                 {
-                    receivingFile.receiving = 0;
-                    receivingFile.fileSize = 0;
-                    file_bytes = 0;
+                    info->receivingFile.receiving = 0;
+                    info->receivingFile.fileSize = 0;
+                    info->file_bytes = 0;
                     printf("Closing\n");
                     continue;
                 }
             } // this else if is for sending file to the client
             else
             {
-                cJSON *jsonCommand = cJSON_Parse(buffer);
+                cJSON *jsonCommand = cJSON_Parse(info->buffer);
                 if (jsonCommand == NULL)
                 {
                     printf("Invalid JSON received\n");
@@ -162,17 +192,18 @@ void client_handler_function( char buffer[1024] , int file_bytes  ,int new_socke
                 cJSON *commandType = cJSON_GetObjectItem(jsonCommand, "command");
                 if (commandType && strcmp(commandType->valuestring, "upload") == 0)
                 {
-                    handel_upload(new_socket, jsonCommand, &receivingFile, inet_ntoa(client_addr.sin_addr));
+                    handel_upload(info->new_socket, jsonCommand, &info->receivingFile, inet_ntoa(info->client_addr.sin_addr));
                 }
                 else if (commandType && strcmp(commandType->valuestring, "download") == 0)
                 {
-                    handel_download(new_socket, jsonCommand, inet_ntoa(client_addr.sin_addr));
+                    handel_download(info->new_socket, jsonCommand, inet_ntoa(info->client_addr.sin_addr));
                 }
                 else if (commandType && strcmp(commandType->valuestring, "close") == 0)
                 {
-                    close(new_socket);
-                    close(server_socket);
-                    return 0;
+                    close(info->new_socket);
+                    close(info->server_socket);
+                    info->is_running=0;
+                    return;
                 }
 
                 cJSON_Delete(jsonCommand);
@@ -183,56 +214,101 @@ void client_handler_function( char buffer[1024] , int file_bytes  ,int new_socke
 
 int main()
 {
-    int server_socket, new_socket, client_addr_len;
-    struct Recieving_File receivingFile = {0, NULL, 0};
-    struct sockaddr_in server_addr, client_addr;
-    char buffer[1024];
-
-    // Create a socket
-    server_socket = socket(AF_INET, SOCK_STREAM, 0);
-    if (server_socket < 0)
+    while(1)
     {
-        perror("Error creating socket");
-        exit(EXIT_FAILURE);
-    }
+        int server_socket, new_socket, client_addr_len;
+        struct Recieving_File receivingFile = {0, NULL, 0};
+        struct sockaddr_in server_addr, client_addr;
+        char buffer[1024];
 
-    // Set server address and port
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(3001); // Replace with desired port
-
-    // Bind the socket to the address and port
-    if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
-    {
-        perror("Error binding socket");
-        exit(EXIT_FAILURE);
-    }
-
-    // Listen for incoming connections
-    if (listen(server_socket, 5) < 0)
-    {
-        perror("Error listening on socket");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("Server listening on port 3001...\n");
-
-    // Accept connections
-    while (1)
-    {
-        client_addr_len = sizeof(client_addr);
-        new_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_addr_len);
-        if (new_socket < 0)
+        // Create a socket
+        server_socket = socket(AF_INET, SOCK_STREAM, 0);
+        if (server_socket < 0)
         {
-            perror("Error accepting connection");
+            perror("Error creating socket");
             exit(EXIT_FAILURE);
         }
 
-        printf("Client connected: %s\n", inet_ntoa(client_addr.sin_addr));
-        int file_bytes = 0;
+        // Set server address and port
+        server_addr.sin_family = AF_INET;
+        server_addr.sin_addr.s_addr = INADDR_ANY;
+        server_addr.sin_port = htons(3001); // Replace with desired port
 
-        // Receive data from the client
-      
+        // Bind the socket to the address and port
+        if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+        {
+            perror("Error binding socket");
+            exit(EXIT_FAILURE);
+        }
+
+        // Listen for incoming connections
+        if (listen(server_socket, 5) < 0)
+        {
+            perror("Error listening on socket");
+            exit(EXIT_FAILURE);
+        }
+
+        printf("Server listening on port 3001...\n");
+
+        // Accept connections
+        while (1)
+        {
+            client_addr_len = sizeof(client_addr);
+            new_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_addr_len);
+            if (new_socket < 0)
+            {
+                perror("Error accepting connection");
+                exit(EXIT_FAILURE);
+            }
+
+            printf("Client connected: %s\n", inet_ntoa(client_addr.sin_addr));
+            int file_bytes = 0;
+
+            /*
+            pthread_t threads[NUM_THREADS];
+            struct thread_info threadInfos[NUM_THREADS];
+            */
+            int found=0;
+            int threadId=0;
+            for (size_t i = 0; i < NUM_THREADS; i++)
+            {
+                if(threadInfos[i].is_running!=1)
+                {
+                    //free thread so using it init
+                    found=1;
+                    threadId=i;
+                    threadInfos[i].thread_id=i;
+
+                    threadInfos[i].client_addr=client_addr;
+                    threadInfos[i].file_bytes=file_bytes;
+                    threadInfos[i].new_socket=new_socket;
+                    threadInfos[i].server_socket=server_socket;
+
+                    for (size_t i = 0; i < 1024; i++)
+                    {
+                        threadInfos[i].buffer[i]=buffer[i];
+                    }
+                    break;
+                }
+            }
+            
+            if (found==1 && pthread_create(&threads[threadId], NULL, client_handler_function, &threadInfos[threadId]) != 0)
+            {
+                perror("Error creating thread");
+                return 1;
+            }
+                
+            
+        for (int i = 0; i < NUM_THREADS; i++) 
+        {
+            if(threadInfos[i].is_running==1)
+                printf("Thread running No. %d",i);
+                else 
+                    printf("Thread empty No. %d",i);
+                
+            }
+        
+        }
     }
 
     return 0;
