@@ -14,6 +14,7 @@ struct download_status
     int isDownloading;
     char *filename;
     int fileSize;
+    int total_recieved;
 };
 
 char *extract_filename(char *path)
@@ -72,12 +73,19 @@ void handel_upload(int clientSocket, cJSON *ServerResponse, cJSON *Command)
     }
 }
 
-void recieve_file(char *content, char *filename)
+void recieve_file(char *content, struct download_status *DN, int bufferBytes)
 {
-    FILE *file = fopen(filename, "ab");
-    if (file)
+    FILE *file = fopen(DN->filename, "ab");
+    if (file && DN->total_recieved < DN->fileSize)
     {
-        fprintf(file, "%s", content);
+        printf("%i, %i, %i\n",DN->fileSize,DN->total_recieved, bufferBytes);
+
+        int remaining = DN->fileSize - DN->total_recieved;
+        int bytes_to_write = (remaining < bufferBytes) ? remaining : bufferBytes;
+
+        fwrite(content, 1, bytes_to_write, file);
+
+        DN->total_recieved += bytes_to_write;
         fclose(file);
     }
     else
@@ -85,20 +93,21 @@ void recieve_file(char *content, char *filename)
         perror("Error opening file for writing");
     }
 }
-
 void handel_download(int clientSocket, cJSON *ServerResponse, struct download_status *downloading)
 {
     cJSON *status = cJSON_GetObjectItem(ServerResponse, "status");
     cJSON *Filename = cJSON_GetObjectItem(ServerResponse, "filename");
-
+    cJSON *Filesize = cJSON_GetObjectItem(ServerResponse, "filesize");
     if (status && strcmp(status->valuestring, "failed") == 0)
     {
         printf("Filed error from server side\n");
     }
     else if (strcmp(status->valuestring, "fetch") == 0)
     {
+        printf("%s\n",cJSON_Print(ServerResponse));
         downloading->isDownloading = 1;
         downloading->filename = Filename->valuestring;
+        downloading->fileSize = atoi(Filesize->valuestring);
     }
 }
 int main()
@@ -107,7 +116,7 @@ int main()
     struct sockaddr_in server_addr;
     char buffer[1024];
 
-    struct download_status downloadingFile = {0, NULL, 0};
+    struct download_status downloadingFile = {0, NULL, 0, 0};
     printf("%i\n", downloadingFile.isDownloading);
     // Create a
     client_socket = socket(AF_INET, SOCK_STREAM, 0);
@@ -154,19 +163,26 @@ int main()
         }
         int bytesRecievedFromServer = recv(client_socket, serverResponse, sizeof(serverResponse), 0);
         // printf("Server Response: %s\n", serverResponse);
-        if(downloadingFile.isDownloading)
+        if (downloadingFile.isDownloading)
         {
-            recieve_file(serverResponse, downloadingFile.filename);
+            recieve_file(serverResponse, &downloadingFile, bytesRecievedFromServer);
+            if (strstr(serverResponse, "{\"status\":\"success\"}"))
+            {
+                downloadingFile.isDownloading = 0;
+                downloadingFile.fileSize = 0;
+                downloadingFile.total_recieved = 0;
+                continue;
+            }
             continue;
         }
-        
+
         cJSON *ServerResponseJSON = cJSON_Parse(serverResponse);
         cJSON *serverCommand = cJSON_GetObjectItem(ServerResponseJSON, "command");
-        if(serverCommand && strcmp(serverCommand->valuestring, "upload")==0)
-            handel_upload(client_socket,ServerResponseJSON,parsedJsonCommand);
-        else if(serverCommand && strcmp(serverCommand->valuestring, "download")==0)
+        if (serverCommand && strcmp(serverCommand->valuestring, "upload") == 0)
+            handel_upload(client_socket, ServerResponseJSON, parsedJsonCommand);
+        else if (serverCommand && strcmp(serverCommand->valuestring, "download") == 0)
         {
-            handel_download(client_socket,ServerResponseJSON,&downloadingFile);
+            handel_download(client_socket, ServerResponseJSON, &downloadingFile);
         }
     }
     printf("Client Socket got disconnected due to error in Command Passed\n");

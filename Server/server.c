@@ -16,6 +16,7 @@ struct Recieving_File
     int receiving;
     char *filename;
     int fileSize;
+    int total_recieved;
 };
 
 struct thread_info
@@ -23,7 +24,7 @@ struct thread_info
     int thread_id;
     int is_running;
     int new_socket;
-    char* client_address;
+    char *client_address;
 };
 
 int isSpaceAvailable(const char *path, int maxSpace)
@@ -38,17 +39,21 @@ int getFileSize(char *path)
     return fileInfo.st_size;
 }
 
-void recieve_file(char *content, char *filename, int filesize, int *totalRecievedBytes, int bufferBytes)
+void recieve_file(char *content, struct Recieving_File *RS, int bufferBytes)
 {
-    FILE *file = fopen(filename, "ab");
+    FILE *file = fopen(RS->filename, "ab");
     if (!file)
     {
         perror("Error in openinig file: ");
     }
-    if (file && *totalRecievedBytes < filesize)
+    if (file && RS->total_recieved < RS->fileSize)
     {
-        fwrite(content, 1, filesize - *totalRecievedBytes > 1023 ? 1023 : filesize - *totalRecievedBytes - 1, file);
-        *totalRecievedBytes += bufferBytes;
+        printf("%i, %i, %i\n",RS->fileSize,RS->total_recieved, bufferBytes);
+        int remaining = RS->fileSize - RS->total_recieved;
+        int bytes_to_write = (remaining < bufferBytes) ? remaining : bufferBytes;
+
+        fwrite(content, 1, bytes_to_write, file);
+        RS->total_recieved += bufferBytes;
         fclose(file);
     }
 }
@@ -101,7 +106,7 @@ void handel_download(int socket, cJSON *command, char *ip)
     if (access(folder_and_file_name, F_OK) == 0)
     {
         char download_response[256];
-        sprintf(download_response, "{\"status\":\"fetch\",\"command\":\"download\",\"filename\":\"%s\"}", fileToCheck->valuestring);
+        sprintf(download_response, "{\"status\":\"fetch\",\"command\":\"download\",\"filename\":\"%s\", \"filesize\":\"%i\"}", fileToCheck->valuestring, getFileSize(folder_and_file_name));
         send(socket, download_response, strlen(download_response), 0);
 
         send_file(socket, folder_and_file_name);
@@ -123,13 +128,12 @@ void handel_download(int socket, cJSON *command, char *ip)
 void *client_handler_function(void *arg)
 {
     struct thread_info *info = (struct thread_info *)arg;
-    info->is_running=1;
+    info->is_running = 1;
     // char buffer[1024] , int file_bytes ,struct Recieving_File receivingFile ,
-    
+
     char buffer[1024];
-    int file_bytes=0;
-    struct Recieving_File receivingFile={0,NULL,0};
-   
+    struct Recieving_File receivingFile = {0, NULL, 0, 0};
+
     while (1)
     {
         memset(buffer, 0, sizeof(buffer));
@@ -151,23 +155,21 @@ void *client_handler_function(void *arg)
             close(info->new_socket);
             printf("client disconnected  %d", info->thread_id);
             info->is_running = 0;
-            break; 
+            break;
         }
 
-         buffer[bytes_received] = '\0';
+        buffer[bytes_received] = '\0';
 
         if (receivingFile.receiving)
         {
-            printf("reviing: %s\n", buffer);
 
-            recieve_file(buffer, receivingFile.filename, receivingFile.fileSize, &file_bytes, bytes_received);
+            recieve_file(buffer, &receivingFile, bytes_received);
 
             if (strstr(buffer, "{\"status\":\"success\"}"))
             {
                 receivingFile.receiving = 0;
                 receivingFile.fileSize = 0;
-                file_bytes = 0;
-                printf("Closing\n");
+                receivingFile.total_recieved = 0;
                 continue;
             }
         } // this else if is for sending file to the client
@@ -183,13 +185,12 @@ void *client_handler_function(void *arg)
             cJSON *commandType = cJSON_GetObjectItem(jsonCommand, "command");
             if (commandType && strcmp(commandType->valuestring, "upload") == 0)
             {
-                handel_upload(info->new_socket, jsonCommand, &receivingFile,info->client_address);
+                handel_upload(info->new_socket, jsonCommand, &receivingFile, info->client_address);
             }
             else if (commandType && strcmp(commandType->valuestring, "download") == 0)
             {
                 handel_download(info->new_socket, jsonCommand, info->client_address);
             }
-    
 
             cJSON_Delete(jsonCommand);
         }
@@ -264,8 +265,8 @@ int main()
                 threadId = i;
                 threadInfos[i].thread_id = i;
                 threadInfos[i].new_socket = new_socket;
-                threadInfos[i].client_address=inet_ntoa(client_addr.sin_addr);
-               
+                threadInfos[i].client_address = inet_ntoa(client_addr.sin_addr);
+
                 break;
             }
         }
