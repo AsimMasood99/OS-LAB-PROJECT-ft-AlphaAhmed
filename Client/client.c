@@ -8,6 +8,7 @@
 #include "parser.h"
 #include <cjson/cJSON.h>
 #include <string.h>
+#include "runLength.h"
 
 struct download_status
 {
@@ -39,16 +40,24 @@ int getFileSize(char *path)
 
 void send_file(int clinetSocket, char *filepath)
 {
+    char *encoded_file = "./Client/encoded.txt";
+    encodeFile(filepath,encoded_file);
+    // send the filepath to the encoder
+    FILE *file = fopen(encoded_file, "rb");
     char stream[1024];
-    FILE *file = fopen(filepath, "rb");
-
     while (fgets(stream, 1024, file) != NULL)
     {
         send(clinetSocket, stream, strlen(stream), 0);
     }
-
     fclose(file);
     printf("File Uploaded Successfully.\n");
+    
+    //deleting the temp encoded file
+    if (remove(encoded_file) == 0) {
+        printf("Temp encoded File deleted successfully.\n");
+    } else {
+        perror("Error deleting Temp encoded file");
+    }
     return;
 }
 
@@ -75,6 +84,7 @@ void handel_upload(int clientSocket, cJSON *ServerResponse, cJSON *Command)
 
 void recieve_file(char *content, struct download_status *DN, int bufferBytes)
 {
+    char *temp_file = "decoded.txt";
     FILE *file = fopen(DN->filename, "ab");
     if (file && DN->total_recieved < DN->fileSize)
     {
@@ -87,6 +97,7 @@ void recieve_file(char *content, struct download_status *DN, int bufferBytes)
 
         DN->total_recieved += bytes_to_write;
         fclose(file);
+        decodeFile(DN->filename,temp_file);
     }
     else
     {
