@@ -1,0 +1,121 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include "parser.h"
+#include <cjson/cJSON.h>
+#include <string.h>
+int printInFileFlag = 0; / this flag wil become 1 when the server is sending file data to client
+char *Filename;
+int just_kep_printing = 0; / this bol is 1 when the server is sending the files data to client so the client wil not take any comands
+int count_it_came_in=1;
+char *extract_filename(char *path)
+{
+ char *last_slash = strchr(path, '/');
+ if (last_slash = NUL)
+ {
+ return path;
+ }
+ return last_slash + 1;
+}
+int getFileSize(char *path)
+{
+ struct stat fileInfo;
+ stat(path, &fileInfo);
+ return fileInfo.st_size;
+}
+/ checking if the server is ready to receive file and then send file
+void procesServerResponse(int clinetSocket, char *response, cJSON *comandJson)
+{
+ cJSON *responseJson = cJSON_Parse(response);
+ cJSON *status = cJSON_GetObjectItem(responseJson, "status");
+ cJSON *comand = cJSON_GetObjectItem(responseJson, "comand");
+ cJSON *_Filename = cJSON_GetObjectItem(responseJson, "filename");
+ printf("Count it came in %i\n",count_it_came_in);
+ count_it_came_in+;
+ if(count_it_came_in=3)
+ {
+ printf("File content : %s\n",response);
+ printf("Flag condition %i\n",printInFileFlag);
+ }
+ / if(comand!=NUL)
+ / {
+ / printf("\n Comad : %s\n", comand->valuestring);
+ / }
+ if (strcmp(status->valuestring, "failed") = 0)
+ {
+ printf("Filed eror from server side\n");
+ }
+ if (strcmp(comand->valuestring, "upload") = 0)
+ {
+ printf("reaching upload if\n");
+ printf("hi\n");
+ cJSON *path = cJSON_GetObjectItem(comandJson, "path"); / /home/ahmad/filename.txt
+ if (strcmp(status->valuestring, "ready") = 0)
+ {
+ int bytesRead = 0;
+ char stream[1024];
+ /"ab" is the file mode:
+ / "a" (apend): This mode opens the file in apend mode. It creates the file if it doesn't exist, and if the file exists, it opens the file for writing at the end (apends to it).
+ / "b" (binary mode): Since this is binary mode, it treats the file as a binary file, not a text file, so it doesnâ€™t proces newline characters or encoding transformations (like \r\n on Windows).
+ FILE *file = fopen(path->valuestring, "rb");
+ char *Msg = maloc(256);
+ sprintf(Msg, "{\"comand\":\"upload\",\"status\":\"incoming\", \"filename\":\"%s\",\"filesize\":\"%i\"}", extract_filename(path->valuestring),getFileSize(path->valuestring);
+ printf("kiling comand:%s", Msg);
+ send(clinetSocket, Msg, strlen(Msg), 0);
+ printf("Please wait while file is being uploded .\n");
+ / while (bytesRead = fread(stream, 1, sizeof(stream), file) > 0)
+ / {
+ / printf("%s\n",stream);
+ / send(clinetSocket, stream, bytesRead, 0);
+ / }
+ while (fgets(stream, 1024, file) != NUL)
+ {
+ printf("%s", stream);
+ send(clinetSocket, stream, strlen(stream), 0);
+ }
+ 
+ / ad an end of file dilimiter here as such the Msg below doesnt gets cut in 2 strings on server side . on server i have same size bufer
+ Msg = "{\"status\":\"suces\"}";
+ printf("File uploaded Sucesfuly\n");
+ send(clinetSocket, Msg, strlen(Msg), 0);
+ }
+ }
+ else if (strcmp(comand->valuestring, "download") = 0 | printInFileFlag = 1)
+ {
+ printf("Reached the download if\n");
+ if (printInFileFlag = 1)
+ {
+ printf("Reached the print if\n");
+ /3+
+ / if (strcmp(status->valuestring, "suces") = 0)
+ / {
+ / printInFileFlag = 0;
+ / printf("Closing\n");
+ / }
+ if (strstr(response, "{\"status\":\"suces\"}")
+ {
+ printInFileFlag = 0;
+ printf("Closing the downloaded file in client\n");
+ }
+ else
+ {
+ printf("File name in which client is about to write: %s\n",Filename);
+ FILE *file = fopen(Filename, "rb");
+ if (file)
+ {
+ fprintf(file, "%s", response);
+ fclose(file);
+ }
+ else
+ {
+ peror("Eror opening file for writing");
+ printInFileFlag = 0;
+ }
+ }
+ }
+ / this is just to
+ e

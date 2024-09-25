@@ -84,7 +84,6 @@ void handel_upload(int clientSocket, cJSON *ServerResponse, cJSON *Command)
 
 void recieve_file(char *content, struct download_status *DN, int bufferBytes)
 {
-    char *temp_file = "decoded.txt";
     FILE *file = fopen(DN->filename, "ab");
     if (file && DN->total_recieved < DN->fileSize)
     {
@@ -97,7 +96,6 @@ void recieve_file(char *content, struct download_status *DN, int bufferBytes)
 
         DN->total_recieved += bytes_to_write;
         fclose(file);
-        decodeFile(DN->filename,temp_file);
     }
     else
     {
@@ -121,6 +119,7 @@ void handel_download(int clientSocket, cJSON *ServerResponse, struct download_st
         downloading->fileSize = atoi(Filesize->valuestring);
     }
 }
+
 int main()
 {
     int client_socket;
@@ -182,6 +181,27 @@ int main()
                 downloadingFile.isDownloading = 0;
                 downloadingFile.fileSize = 0;
                 downloadingFile.total_recieved = 0;
+                char* temp_file = "temp.txt";
+                decodeFile(downloadingFile.filename,temp_file);
+                // now deleting the encoded file
+                char* decoy_name = "__.txt";
+                if (rename(downloadingFile.filename,decoy_name))
+                {
+                    printf("File name changed 1\n");
+                    if(rename(temp_file,downloadingFile.filename))
+                    {
+                        printf("Second File name changed successfully 2 going towards deletion\n");
+                        if (remove(decoy_name) == 0) {
+                            printf("Temp encoded File deleted successfully.\n");
+                        } else {
+                            perror("Error deleting Temp encoded file");
+                        }
+                    }   
+                }
+                else{
+                    printf("Failed to change 1\n");
+                }
+
                 continue;
             }
             continue;
