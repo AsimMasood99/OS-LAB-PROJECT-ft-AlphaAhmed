@@ -8,7 +8,7 @@
 #include <cjson/cJSON.h>
 #include <sys/stat.h>
 #include <pthread.h>
-#include <dirent.h>
+
 #define NUM_THREADS 10
 
 struct Recieving_File
@@ -25,60 +25,6 @@ struct thread_info
     int new_socket;
     char* client_address;
 };
-
-long get_file_size(const char *path) {
-    struct stat st;
-
-    // Get file statistics
-    if (stat(path, &st) == 0) {
-        return st.st_size;  // Return the file size in bytes
-    } else {
-        perror("stat");
-        return 0;
-    }
-}
-
-long get_directory_size(const char *dirpath) {
-    DIR *dir;
-    struct dirent *entry;
-    long total_size = 0;
-    char filepath[1024];
-
-    // Open the directory
-    dir = opendir(dirpath);
-    if (!dir) {
-        perror("opendir");
-        return 0;
-    }
-
-    // Read each entry in the directory
-    while ((entry = readdir(dir)) != NULL) {
-        // Skip "." and ".." entries
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue;
-        }
-
-        // Build the full file path
-        snprintf(filepath, sizeof(filepath), "%s/%s", dirpath, entry->d_name);
-
-        // Check if the entry is a directory or a file
-        struct stat st;
-        if (stat(filepath, &st) == 0) {
-            if (S_ISDIR(st.st_mode)) {
-                // If it's a directory, recursively get its size
-                total_size += get_directory_size(filepath);
-            } else if (S_ISREG(st.st_mode)) {
-                // If it's a regular file, add its size
-                total_size += st.st_size;
-            }
-        }
-    }
-
-    // Close the directory
-    closedir(dir);
-
-    return total_size;
-}
 
 int isSpaceAvailable(const char *path, int maxSpace)
 {
@@ -126,19 +72,10 @@ void handel_upload(int socket, cJSON *command, struct Recieving_File *recievingS
     printf("%s\n",cJSON_Print(command));
     if (stat(folder_name, &folder) == -1)
     {
-        mkdir(folder_name, 0700); 
+        mkdir(folder_name, 0700);
     }
-    cJSON *file_size = cJSON_GetObjectItem(command, "filesize");
-    
-    if(get_directory_size(folder_name)+atoi(file_size->valuestring)<=10240){
-    
     char *response = "{\"status\":\"ready\", \"command\":\"upload\"}";
     send(socket, response, strlen(response), 0);
-    }
-    else{
-        char *response = "{\"status\":\"failed\", \"command\":\"upload\"}";
-     send(socket, response, strlen(response), 0);
-    }
     return;
 }
 

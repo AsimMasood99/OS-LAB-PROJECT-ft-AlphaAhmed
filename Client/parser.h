@@ -15,6 +15,13 @@ int isValidPath(const char *filePath)
     return 0;
 }
 
+int getFileSize(char *path)
+{
+    struct stat fileInfo;
+    stat(path, &fileInfo);
+    return fileInfo.st_size;
+}
+
 void PARSER(const char *command, char *parsedCommand)
 {
     char tempStr[256];
@@ -31,7 +38,7 @@ void PARSER(const char *command, char *parsedCommand)
         char *path = strtok(NULL, "$");
         if (isValidPath(path))
         {
-            sprintf(parsedCommand, "{\"command\": \"%s\", \"path\": \"%s\"}", commandType, path);
+            sprintf(parsedCommand, "{\"command\": \"%s\", \"path\": \"%s\",\"filesize\":\"%i\"}", commandType, path, getFileSize(path));
             return;
         }
         else
