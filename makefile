@@ -1,19 +1,16 @@
 client: 
 	gcc ./Client/client.c -o ./build/client -lcjson
 
-runClient:
-	./Client/client
-
 server: 
 	gcc ./Server/server.c -o ./build/server -lcjson
 
 runServer:
-	./Server/server
+	./build/server
 
-cleanClinet: 
-	rm -rf ./Client/
-	
+runClient:
+	./build/client
 
-cleanServer:
-	rm -rf ./Server/server
+clean: 
+	rm -rf ./build/client
+	rm -rf ./build/server
 

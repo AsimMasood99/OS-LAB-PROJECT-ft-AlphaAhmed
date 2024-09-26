@@ -31,14 +31,9 @@ char *extract_filename(char *path)
     return last_slash + 1;
 }
 
-
-
 void send_file(int clinetSocket, char *filepath)
 {
-    char *encoded_file = "./Client/encoded.txt";
-    encodeFile(filepath,encoded_file);
-    // send the filepath to the encoder
-    FILE *file = fopen(encoded_file, "rb");
+    FILE *file = fopen(filepath, "rb");
     char stream[1024];
     while (fgets(stream, 1024, file) != NULL)
     {
@@ -46,13 +41,6 @@ void send_file(int clinetSocket, char *filepath)
     }
     fclose(file);
     printf("File Uploaded Successfully.\n");
-    
-    //deleting the temp encoded file
-    if (remove(encoded_file) == 0) {
-        printf("Temp encoded File deleted successfully.\n");
-    } else {
-        perror("Error deleting Temp encoded file");
-    }
     return;
 }
 
@@ -61,23 +49,33 @@ void handel_upload(int clientSocket, cJSON *ServerResponse, cJSON *Command)
     cJSON *status = cJSON_GetObjectItem(ServerResponse, "status");
     cJSON *command = cJSON_GetObjectItem(Command, "command");
     cJSON *path = cJSON_GetObjectItem(Command, "path");
-    
+
     if (strcmp(status->valuestring, "ready") == 0)
     {
+        char *encoded_file = "./Client/encoded.txt";
+        encodeFile(path->valuestring, encoded_file);
         char *Msg = malloc(256);
-        sprintf(Msg, "{\"command\":\"upload\",\"status\":\"incoming\", \"filename\":\"%s\",\"filesize\":\"%i\"}", extract_filename(path->valuestring), getFileSize(path->valuestring));
+        sprintf(Msg, "{\"command\":\"upload\",\"status\":\"incoming\", \"filename\":\"%s\",\"filesize\":\"%i\"}", extract_filename(path->valuestring), getFileSize(encoded_file));
         send(clientSocket, Msg, strlen(Msg), 0);
         printf("Please wait while file is being uploded ...\n");
 
-        send_file(clientSocket, path->valuestring);
+        send_file(clientSocket, encoded_file);
 
+        if (remove(encoded_file) == 0)
+        {
+            printf("Temp encoded File deleted successfully.\n");
+        }
+        else
+        {
+            perror("Error deleting Temp encoded file");
+        }
         Msg = "{\"status\":\"success\"}";
         printf("File uploaded Successfully\n");
         send(clientSocket, Msg, strlen(Msg), 0);
     }
-    else if(status->valuestring, "failed")
+    else if (status->valuestring, "failed")
     {
-        printf("uploading this file %s will result in exceeding size limit\n",path->valuestring);
+        printf("uploading this file %s will result in exceeding size limit\n", path->valuestring);
     }
 }
 
@@ -86,7 +84,7 @@ void recieve_file(char *content, struct download_status *DN, int bufferBytes)
     FILE *file = fopen(DN->filename, "ab");
     if (file && DN->total_recieved < DN->fileSize)
     {
-        printf("%i, %i, %i\n",DN->fileSize,DN->total_recieved, bufferBytes);
+        printf("%i, %i, %i\n", DN->fileSize, DN->total_recieved, bufferBytes);
 
         int remaining = DN->fileSize - DN->total_recieved;
         int bytes_to_write = (remaining < bufferBytes) ? remaining : bufferBytes;
@@ -112,7 +110,7 @@ void handel_download(int clientSocket, cJSON *ServerResponse, struct download_st
     }
     else if (strcmp(status->valuestring, "fetch") == 0)
     {
-        printf("%s\n",cJSON_Print(ServerResponse));
+        printf("%s\n", cJSON_Print(ServerResponse));
         downloading->isDownloading = 1;
         downloading->filename = Filename->valuestring;
         downloading->fileSize = atoi(Filesize->valuestring);
@@ -121,7 +119,7 @@ void handel_download(int clientSocket, cJSON *ServerResponse, struct download_st
 
 void handle_view(int clientSocket, cJSON *ServerResponse)
 {
-    printf("%s",cJSON_Print(ServerResponse));
+    printf("%s", cJSON_Print(ServerResponse));
 }
 
 int main()
@@ -170,7 +168,7 @@ int main()
             cJSON *path = cJSON_GetObjectItem(parsedJsonCommand, "path");
             if (error)
             {
-                printf("%s",parsedCommand);
+                printf("%s", parsedCommand);
                 printf("Error in command\n");
                 continue;
             }
@@ -186,24 +184,28 @@ int main()
                 downloadingFile.isDownloading = 0;
                 downloadingFile.fileSize = 0;
                 downloadingFile.total_recieved = 0;
-                char* temp_file = "temp.txt";
-                decodeFile(downloadingFile.filename,temp_file);
+                char *temp_file = "temp.txt";
+                decodeFile(downloadingFile.filename, temp_file);
                 // now deleting the encoded file
-                char* decoy_name = "__.txt";
-                if (rename(downloadingFile.filename,decoy_name))
+                char *decoy_name = "__.txt";
+                if (rename(downloadingFile.filename, decoy_name))
                 {
                     printf("File name changed 1\n");
-                    if(rename(temp_file,downloadingFile.filename))
+                    if (rename(temp_file, downloadingFile.filename))
                     {
                         printf("Second File name changed successfully 2 going towards deletion\n");
-                        if (remove(decoy_name) == 0) {
+                        if (remove(decoy_name) == 0)
+                        {
                             printf("Temp encoded File deleted successfully.\n");
-                        } else {
+                        }
+                        else
+                        {
                             perror("Error deleting Temp encoded file");
                         }
-                    }   
+                    }
                 }
-                else{
+                else
+                {
                     printf("Failed to change 1\n");
                 }
 
@@ -220,10 +222,10 @@ int main()
         {
             handel_download(client_socket, ServerResponseJSON, &downloadingFile);
         }
-        else if(serverCommand && strcmp(serverCommand->valuestring, "view") == 0)
+        else if (serverCommand && strcmp(serverCommand->valuestring, "view") == 0)
         {
             printf("Server Response: %s\n", serverResponse);
-            handle_view(client_socket,ServerResponseJSON);
+            handle_view(client_socket, ServerResponseJSON);
         }
     }
     printf("Client Socket got disconnected due to error in Command Passed\n");
