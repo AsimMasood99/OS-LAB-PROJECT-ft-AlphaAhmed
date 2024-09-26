@@ -31,12 +31,7 @@ char *extract_filename(char *path)
     return last_slash + 1;
 }
 
-int getFileSize(char *path)
-{
-    struct stat fileInfo;
-    stat(path, &fileInfo);
-    return fileInfo.st_size;
-}
+
 
 void send_file(int clinetSocket, char *filepath)
 {
@@ -66,7 +61,7 @@ void handel_upload(int clientSocket, cJSON *ServerResponse, cJSON *Command)
     cJSON *status = cJSON_GetObjectItem(ServerResponse, "status");
     cJSON *command = cJSON_GetObjectItem(Command, "command");
     cJSON *path = cJSON_GetObjectItem(Command, "path");
-
+    
     if (strcmp(status->valuestring, "ready") == 0)
     {
         char *Msg = malloc(256);
@@ -79,6 +74,10 @@ void handel_upload(int clientSocket, cJSON *ServerResponse, cJSON *Command)
         Msg = "{\"status\":\"success\"}";
         printf("File uploaded Successfully\n");
         send(clientSocket, Msg, strlen(Msg), 0);
+    }
+    else if(status->valuestring, "failed")
+    {
+        printf("uploading this file %s will result in exceeding size limit",path->valuestring);
     }
 }
 
@@ -171,6 +170,7 @@ int main()
             cJSON *path = cJSON_GetObjectItem(parsedJsonCommand, "path");
             if (error)
             {
+                printf("%s",parsedCommand);
                 printf("Error in command\n");
                 continue;
             }

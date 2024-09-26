@@ -1,0 +1,28 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include "parser.h"        int bytesRecievedFromServer = recv(client_socket, serverResponse, sizeof(serverResponse), 0);
+        // printf("Server Response: %s\n", serverResponse);
+        if(downloadingFile.isDownloading)
+        {
+            recieve_file(serverResponse, downloadingFile.filename);
+            continue;
+        }
+        
+        cJSON *ServerResponseJSON = cJSON_Parse(serverResponse);
+        cJSON *serverCommand = cJSON_GetObjectItem(ServerResponseJSON, "command");
+        if(serverCommand && strcmp(serverCommand->valuestring, "upload")==0)
+            handel_upload(client_socket,ServerResponseJSON,parsedJsonCommand);
+        else if(serverCommand && strcmp(serverCommand->valuestring, "download")==0)
+        {
+            handel_download(client_socket,ServerResponseJSON,&downloadingFile);
+        }
+    }
+    printf("Client Socket got disconnected due to error in Command Passed\n");
+    close(client_socket);
+    return 0;
+}

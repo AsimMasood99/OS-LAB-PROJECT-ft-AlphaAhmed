@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-// Function to encode the input file using Run-Length Encoding with ASCII-based count
-
+// Function to encode the input file using Run-Length Encoding
 void encodeFile(const char *inputFile, const char *outputFile) {
     FILE *in = fopen(inputFile, "r");
     FILE *out = fopen(outputFile, "w");
@@ -16,35 +16,27 @@ void encodeFile(const char *inputFile, const char *outputFile) {
     int count = 1;
 
     prev = fgetc(in); // Read the first character
-    if (prev == EOF) {
-        fclose(in);
-        fclose(out);
-        return; // If the file is empty, nothing to encode
-    }
-    
     while ((ch = fgetc(in)) != EOF) {
         if (ch == prev) {
             count++;
         } else {
-            // Convert count to a char and write it with the character
-            char val = count;
-            fputc(val, out);  // Write the ASCII-encoded count
-            fputc(prev, out); // Write the character
+            // Write the encoded character and count to the output file
+            fprintf(out, "%d%c", count, prev);
             count = 1; // Reset count for the new character
         }
         prev = ch;
     }
 
     // Write the last run to the output file
-    char val = count;
-    fputc(val, out);  // Write the ASCII-encoded count
-    fputc(prev, out); // Write the last character
+    if (count > 0) {
+        fprintf(out, "%d%c", count, prev);
+    }
 
     fclose(in);
     fclose(out);
 }
 
-// Function to decode the file encoded with Run-Length Encoding
+// Function to decode the encoded file back to original text
 void decodeFile(const char *inputFile, const char *outputFile) {
     FILE *in = fopen(inputFile, "r");
     FILE *out = fopen(outputFile, "w");
@@ -54,13 +46,11 @@ void decodeFile(const char *inputFile, const char *outputFile) {
         exit(1);
     }
 
-    char countChar, ch;
     int count;
+    char ch;
 
-    // Read count (as ASCII) and character alternately from the input file
-    while ((countChar = fgetc(in)) != EOF && (ch = fgetc(in)) != EOF) {
-        count = (unsigned char) countChar; // Convert ASCII back to int (unsigned for correct range)
-        
+    // Read count and character alternately from the input file
+    while (fscanf(in, "%d%c", &count, &ch) == 2) {
         for (int i = 0; i < count; i++) {
             fputc(ch, out); // Write character 'count' times
         }
@@ -70,18 +60,18 @@ void decodeFile(const char *inputFile, const char *outputFile) {
     fclose(out);
 }
 
-// int main() {
-//     const char *inputFile = "text.txt";
-//     const char *encodedFile = "encoding.txt";
-//     const char *decodedFile = "decoding.txt";
+int main() {
+    const char *inputFile = "text.txt";
+    const char *encodedFile = "encoding.txt";
+    const char *decodedFile = "decoding.txt";
 
-//     // Encode the input file
-//     encodeFile(inputFile, encodedFile);
-//     printf("Encoding complete! Check encoding.txt\n");
+    // Encode the input file
+    encodeFile(inputFile, encodedFile);
+    printf("Encoding complete! Check encoding.txt\n");
 
-//     // Decode the encoded file back to original text
-//     decodeFile(encodedFile, decodedFile);
-//     printf("Decoding complete! Check decoding.txt\n");
+    // Decode the encoded file back to original text
+    decodeFile(encodedFile, decodedFile);
+    printf("Decoding complete! Check decoding.txt\n");
 
-//     return 0;
-// }
+    return 0;
+}
