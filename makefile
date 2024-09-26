@@ -11,7 +11,8 @@ runServer:
 	./Server/server
 
 cleanClinet: 
-	rm -rf ./Client/client
+	rm -rf ./Client/
+	
 
 cleanServer:
 	rm -rf ./Server/server

@@ -77,7 +77,7 @@ void handel_upload(int clientSocket, cJSON *ServerResponse, cJSON *Command)
     }
     else if(status->valuestring, "failed")
     {
-        printf("uploading this file %s will result in exceeding size limit",path->valuestring);
+        printf("uploading this file %s will result in exceeding size limit\n",path->valuestring);
     }
 }
 

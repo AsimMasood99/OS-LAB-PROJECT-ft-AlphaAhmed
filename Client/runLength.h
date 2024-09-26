@@ -60,18 +60,18 @@ void decodeFile(const char *inputFile, const char *outputFile) {
     fclose(out);
 }
 
-int main() {
-    const char *inputFile = "text.txt";
-    const char *encodedFile = "encoding.txt";
-    const char *decodedFile = "decoding.txt";
+// int main() {
+//     const char *inputFile = "text.txt";
+//     const char *encodedFile = "encoding.txt";
+//     const char *decodedFile = "decoding.txt";
 
-    // Encode the input file
-    encodeFile(inputFile, encodedFile);
-    printf("Encoding complete! Check encoding.txt\n");
+//     // Encode the input file
+//     encodeFile(inputFile, encodedFile);
+//     printf("Encoding complete! Check encoding.txt\n");
 
-    // Decode the encoded file back to original text
-    decodeFile(encodedFile, decodedFile);
-    printf("Decoding complete! Check decoding.txt\n");
+//     // Decode the encoded file back to original text
+//     decodeFile(encodedFile, decodedFile);
+//     printf("Decoding complete! Check decoding.txt\n");
 
-    return 0;
-}
+//     return 0;
+// }
