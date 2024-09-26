@@ -1,6 +1,7 @@
 # Prerequisites
 *.d
 .vscode
+build
 # Object files
 *.o
 *.ko
@@ -54,4 +55,3 @@ dkms.conf
 #files and fileINFolders to ignore in current directory
 .elf
 .out
-Client/client.elf
