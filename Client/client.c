@@ -8,6 +8,7 @@
 #include "parser.h"
 #include <cjson/cJSON.h>
 #include <string.h>
+#include <errno.h>  // For errno and error codes
 #include "runLength.h"
 
 struct download_status
@@ -122,6 +123,31 @@ void handle_view(int clientSocket, cJSON *ServerResponse)
     printf("%s", cJSON_Print(ServerResponse));
 }
 
+int copyFile(char *src,char *dst) {
+    FILE *sourceFile = fopen(src, "rb");
+    FILE *destFile = fopen(dst, "wb");
+    if (sourceFile == NULL || destFile == NULL) {
+        perror("Error opening file");
+        if (sourceFile) fclose(sourceFile);
+        if (destFile) fclose(destFile);
+        return 1;   
+    }
+
+    char buffer[1024];
+    size_t bytesRead;
+
+    // Read from source and write to destination
+    while ((bytesRead = fread(buffer, 1, sizeof(buffer), sourceFile)) > 0) {
+        fwrite(buffer, 1, bytesRead, destFile);
+    }
+
+    fclose(sourceFile);
+    fclose(destFile);
+
+    return 0;
+}
+
+
 int main()
 {
     int client_socket;
@@ -184,31 +210,15 @@ int main()
                 downloadingFile.isDownloading = 0;
                 downloadingFile.fileSize = 0;
                 downloadingFile.total_recieved = 0;
-                char *temp_file = "temp.txt";
-                decodeFile(downloadingFile.filename, temp_file);
-                // now deleting the encoded file
-                char *decoy_name = "__.txt";
-                if (rename(downloadingFile.filename, decoy_name))
-                {
-                    printf("File name changed 1\n");
-                    if (rename(temp_file, downloadingFile.filename))
-                    {
-                        printf("Second File name changed successfully 2 going towards deletion\n");
-                        if (remove(decoy_name) == 0)
-                        {
-                            printf("Temp encoded File deleted successfully.\n");
-                        }
-                        else
-                        {
-                            perror("Error deleting Temp encoded file");
-                        }
-                    }
+                char* temp_file = "temp.txt";
+                decodeFile(downloadingFile.filename,temp_file);
+                // now copying decoded file into real file
+                copyFile(temp_file,downloadingFile.filename);
+                if (remove(temp_file) == 0) {
+                    printf("Temp encoded File deleted successfully.\n");
+                } else {
+                    perror("Error deleting Temp encoded file");
                 }
-                else
-                {
-                    printf("Failed to change 1\n");
-                }
-
                 continue;
             }
             continue;
