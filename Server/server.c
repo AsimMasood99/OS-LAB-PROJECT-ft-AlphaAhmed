@@ -8,6 +8,7 @@
 #include <cjson/cJSON.h>
 #include <sys/stat.h>
 #include <pthread.h>
+#include <dirent.h>
 
 #define NUM_THREADS 10
 
@@ -97,6 +98,49 @@ void send_file(int socket, char *filepath)
     return;
 }
 
+// Function to check if the given path is a directory or a file
+// int isDirectory(const char *path) {
+//     struct stat statbuf;
+//     if (stat(path, &statbuf) != 0) {
+//         return 0; // Error, assume not a directory
+//     }
+//     return S_ISDIR(statbuf.st_mode); // Return true if it's a directory
+// }
+
+void send_fileNames_For_View(int socket,char* folder_name)
+{
+    // Open the folder
+    DIR *dir = opendir(folder_name);
+    if (dir == NULL) {
+        printf("Error opening directory for view file");
+        return ;
+    }
+
+    cJSON *root = cJSON_CreateObject();  // Create the root JSON object
+    struct dirent *entry;
+    int count = 0;
+
+    // Iterate through the directory entries
+     while ((entry = readdir(dir)) != NULL) {
+        // Skip the current and parent directories
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        // Add the file/folder name to the JSON object
+        char key[10];
+        sprintf(key, "%d", count);  // Convert count to a string for the key
+        cJSON_AddStringToObject(root, key, entry->d_name);  // Add the name only as the value
+        count++;
+    }
+    char* temp=cJSON_Print(root);
+    printf("%s\n",temp);
+    closedir(dir);
+    send(socket,temp,strlen(temp),0);
+    printf("Successfully sent string for view\n");
+    
+}
+
 void handel_download(int socket, cJSON *command, char *ip)
 {
     cJSON *fileToCheck = cJSON_GetObjectItem(command, "filename"); // jahaz ider filename ana tha
@@ -106,7 +150,7 @@ void handel_download(int socket, cJSON *command, char *ip)
     if (access(folder_and_file_name, F_OK) == 0)
     {
         char download_response[256];
-        sprintf(download_response, "{\"status\":\"fetch\",\"command\":\"download\",\"filename\":\"%s\", \"filesize\":\"%i\"}", fileToCheck->valuestring, getFileSize(folder_and_file_name));
+         sprintf(download_response, "{\"status\":\"fetch\",\"command\":\"download\",\"filename\":\"%s\", \"filesize\":\"%i\"}", fileToCheck->valuestring, getFileSize(folder_and_file_name));
         send(socket, download_response, strlen(download_response), 0);
 
         send_file(socket, folder_and_file_name);
@@ -123,6 +167,19 @@ void handel_download(int socket, cJSON *command, char *ip)
         char *failed_responce = "{\"status\":\"failed\"}";
         send(socket, failed_responce, strlen(failed_responce), 0);
     }
+}
+
+void handle_view(int socket,cJSON *command,char* ip)
+{
+    char folder_name[1024];
+    snprintf(folder_name, sizeof(folder_name), "./Server/Storage/%s", ip);
+    char view_responce[256];
+    // sending view responce to the client
+    sprintf(view_responce,"{\"command\":\"view\"}");
+    send(socket, view_responce, strlen(view_responce), 0);
+    // sending filenames
+    send_fileNames_For_View(socket,folder_name);
+    printf("Names of Files in folder sent to client successfully\n");
 }
 
 void *client_handler_function(void *arg)
@@ -190,6 +247,10 @@ void *client_handler_function(void *arg)
             else if (commandType && strcmp(commandType->valuestring, "download") == 0)
             {
                 handel_download(info->new_socket, jsonCommand, info->client_address);
+            }
+            else if(commandType && strcmp(commandType->valuestring, "view") == 0)
+            {
+                handle_view(info->new_socket,jsonCommand,info->client_address);
             }
 
             cJSON_Delete(jsonCommand);

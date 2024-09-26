@@ -51,6 +51,11 @@ void PARSER(const char *command, char *parsedCommand)
         //     strcpy(parsedCommand, "{\"error\":\"Invalid Path\"}");
         return;
     }
+    else if(strcmp(commandType, "view") == 0)
+    {
+        sprintf(parsedCommand, "{\"command\": \"%s\"}", commandType);
+        return;
+    }
     else if(strcmp(commandType, "close") == 0){
             sprintf(parsedCommand, "{\"command\": \"%s\"}", commandType);
             return;

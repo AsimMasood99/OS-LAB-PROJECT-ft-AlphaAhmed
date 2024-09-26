@@ -120,6 +120,11 @@ void handel_download(int clientSocket, cJSON *ServerResponse, struct download_st
     }
 }
 
+void handle_view(int clientSocket, cJSON *ServerResponse)
+{
+    printf("%s",cJSON_Print(ServerResponse));
+}
+
 int main()
 {
     int client_socket;
@@ -214,6 +219,11 @@ int main()
         else if (serverCommand && strcmp(serverCommand->valuestring, "download") == 0)
         {
             handel_download(client_socket, ServerResponseJSON, &downloadingFile);
+        }
+        else if(serverCommand && strcmp(serverCommand->valuestring, "view") == 0)
+        {
+            printf("Server Response: %s\n", serverResponse);
+            handle_view(client_socket,ServerResponseJSON);
         }
     }
     printf("Client Socket got disconnected due to error in Command Passed\n");
