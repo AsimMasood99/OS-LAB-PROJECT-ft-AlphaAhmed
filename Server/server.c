@@ -161,15 +161,6 @@ void send_file(int socket, char *filepath)
     return;
 }
 
-// Function to check if the given path is a directory or a file
-// int isDirectory(const char *path) {
-//     struct stat statbuf;
-//     if (stat(path, &statbuf) != 0) {
-//         return 0; // Error, assume not a directory
-//     }
-//     return S_ISDIR(statbuf.st_mode); // Return true if it's a directory
-// }
-
 void send_fileNames_For_View(int socket,char* folder_name)
 {
     // Open the folder
@@ -201,7 +192,6 @@ void send_fileNames_For_View(int socket,char* folder_name)
     closedir(dir);
     send(socket,temp,strlen(temp),0);
     printf("Successfully sent string for view\n");
-    
 }
 
 void handel_download(int socket, cJSON *command, char *ip)

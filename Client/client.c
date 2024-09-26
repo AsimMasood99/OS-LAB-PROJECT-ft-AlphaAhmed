@@ -8,7 +8,7 @@
 #include "parser.h"
 #include <cjson/cJSON.h>
 #include <string.h>
-#include <errno.h>  // For errno and error codes
+#include <errno.h> // For errno and error codes
 #include "runLength.h"
 
 struct download_status
@@ -118,26 +118,33 @@ void handel_download(int clientSocket, cJSON *ServerResponse, struct download_st
     }
 }
 
-void handle_view(int clientSocket, cJSON *ServerResponse)
+void handle_view(int clientSocket, cJSON *ServerResponse, char *res)
 {
+    // printf("%s, %zu\n\n", res, strlen(res));
+    printf("FILES ON SERVER ARE: \n");
     printf("%s", cJSON_Print(ServerResponse));
 }
 
-int copyFile(char *src,char *dst) {
+int copyFile(char *src, char *dst)
+{
     FILE *sourceFile = fopen(src, "rb");
     FILE *destFile = fopen(dst, "wb");
-    if (sourceFile == NULL || destFile == NULL) {
+    if (sourceFile == NULL || destFile == NULL)
+    {
         perror("Error opening file");
-        if (sourceFile) fclose(sourceFile);
-        if (destFile) fclose(destFile);
-        return 1;   
+        if (sourceFile)
+            fclose(sourceFile);
+        if (destFile)
+            fclose(destFile);
+        return 1;
     }
 
     char buffer[1024];
     size_t bytesRead;
 
     // Read from source and write to destination
-    while ((bytesRead = fread(buffer, 1, sizeof(buffer), sourceFile)) > 0) {
+    while ((bytesRead = fread(buffer, 1, sizeof(buffer), sourceFile)) > 0)
+    {
         fwrite(buffer, 1, bytesRead, destFile);
     }
 
@@ -147,7 +154,6 @@ int copyFile(char *src,char *dst) {
     return 0;
 }
 
-
 int main()
 {
     int client_socket;
@@ -155,8 +161,6 @@ int main()
     char buffer[1024];
 
     struct download_status downloadingFile = {0, NULL, 0, 0};
-    printf("%i\n", downloadingFile.isDownloading);
-    // Create a
     client_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (client_socket < 0)
     {
@@ -178,6 +182,8 @@ int main()
     while (1)
     {
         char serverResponse[4086];
+        memset(buffer, 0, sizeof(buffer));
+        memset(serverResponse, 0, sizeof(serverResponse));
         char command[256];
         char *parsedCommand = NULL;
         cJSON *parsedJsonCommand = NULL;
@@ -210,13 +216,16 @@ int main()
                 downloadingFile.isDownloading = 0;
                 downloadingFile.fileSize = 0;
                 downloadingFile.total_recieved = 0;
-                char* temp_file = "temp.txt";
-                decodeFile(downloadingFile.filename,temp_file);
+                char *temp_file = "temp.txt";
+                decodeFile(downloadingFile.filename, temp_file);
                 // now copying decoded file into real file
-                copyFile(temp_file,downloadingFile.filename);
-                if (remove(temp_file) == 0) {
+                copyFile(temp_file, downloadingFile.filename);
+                if (remove(temp_file) == 0)
+                {
                     printf("Temp encoded File deleted successfully.\n");
-                } else {
+                }
+                else
+                {
                     perror("Error deleting Temp encoded file");
                 }
                 continue;
@@ -234,8 +243,9 @@ int main()
         }
         else if (serverCommand && strcmp(serverCommand->valuestring, "view") == 0)
         {
-            printf("Server Response: %s\n", serverResponse);
-            handle_view(client_socket, ServerResponseJSON);
+            bytesRecievedFromServer = recv(client_socket, serverResponse, sizeof(serverResponse), 0);
+            ServerResponseJSON = cJSON_Parse(serverResponse);
+            handle_view(client_socket, ServerResponseJSON, serverResponse);
         }
     }
     printf("Client Socket got disconnected due to error in Command Passed\n");
