@@ -115,6 +115,14 @@ void handel_download(int clientSocket, cJSON *ServerResponse, struct download_st
         downloading->isDownloading = 1;
         downloading->filename = Filename->valuestring;
         downloading->fileSize = atoi(Filesize->valuestring);
+        if(access(Filename->valuestring,F_OK)==0)
+        {
+            remove(Filename->valuestring);
+        }
+        else
+        {
+            printf("NOT ACCESSED\n");
+        }
     }
 }
 
@@ -218,7 +226,7 @@ int main()
                 downloadingFile.total_recieved = 0;
                 char *temp_file = "temp.txt";
                 decodeFile(downloadingFile.filename, temp_file);
-                // now copying decoded file into real file
+                // // now copying decoded file into real file
                 copyFile(temp_file, downloadingFile.filename);
                 if (remove(temp_file) == 0)
                 {

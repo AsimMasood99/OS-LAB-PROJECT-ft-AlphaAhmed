@@ -24,22 +24,27 @@ struct thread_info
     int thread_id;
     int is_running;
     int new_socket;
-    char* client_address;
+    char *client_address;
 };
 
-long get_file_size(const char *path) {
+long get_file_size(const char *path)
+{
     struct stat st;
 
     // Get file statistics
-    if (stat(path, &st) == 0) {
-        return st.st_size;  // Return the file size in bytes
-    } else {
+    if (stat(path, &st) == 0)
+    {
+        return st.st_size; // Return the file size in bytes
+    }
+    else
+    {
         perror("stat");
         return 0;
     }
 }
 
-long get_directory_size(const char *dirpath) {
+long get_directory_size(const char *dirpath)
+{
     DIR *dir;
     struct dirent *entry;
     long total_size = 0;
@@ -47,15 +52,18 @@ long get_directory_size(const char *dirpath) {
 
     // Open the directory
     dir = opendir(dirpath);
-    if (!dir) {
+    if (!dir)
+    {
         perror("opendir");
         return 0;
     }
 
     // Read each entry in the directory
-    while ((entry = readdir(dir)) != NULL) {
+    while ((entry = readdir(dir)) != NULL)
+    {
         // Skip "." and ".." entries
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+        {
             continue;
         }
 
@@ -64,11 +72,15 @@ long get_directory_size(const char *dirpath) {
 
         // Check if the entry is a directory or a file
         struct stat st;
-        if (stat(filepath, &st) == 0) {
-            if (S_ISDIR(st.st_mode)) {
+        if (stat(filepath, &st) == 0)
+        {
+            if (S_ISDIR(st.st_mode))
+            {
                 // If it's a directory, recursively get its size
                 total_size += get_directory_size(filepath);
-            } else if (S_ISREG(st.st_mode)) {
+            }
+            else if (S_ISREG(st.st_mode))
+            {
                 // If it's a regular file, add its size
                 total_size += st.st_size;
             }
@@ -102,7 +114,7 @@ void recieve_file(char *content, struct Recieving_File *RS, int bufferBytes)
     }
     if (file && RS->total_recieved < RS->fileSize)
     {
-        printf("%i, %i, %i\n",RS->fileSize,RS->total_recieved, bufferBytes);
+        printf("%i, %i, %i\n", RS->fileSize, RS->total_recieved, bufferBytes);
         int remaining = RS->fileSize - RS->total_recieved;
         int bytes_to_write = (remaining < bufferBytes) ? remaining : bufferBytes;
 
@@ -110,6 +122,23 @@ void recieve_file(char *content, struct Recieving_File *RS, int bufferBytes)
         RS->total_recieved += bufferBytes;
         fclose(file);
     }
+}
+
+void delteFileBeforeUpload(char *filename,char* ip)
+{
+    char filepath[256] = "./Server/Storage/";
+    strcat(filepath, ip);
+    strcat(filepath, "/");
+    strcat(filepath,filename);
+    if(access(filepath,F_OK)==0)
+    {
+        remove(filepath);
+        printf("DONE\n");
+    }
+    else {
+        printf("not accessed\n");
+    }
+
 }
 
 void handel_upload(int socket, cJSON *command, struct Recieving_File *recievingStatus, char *ip)
@@ -124,25 +153,29 @@ void handel_upload(int socket, cJSON *command, struct Recieving_File *recievingS
         recievingStatus->filename = malloc(strlen(folder_name) + strlen(cJSON_GetObjectItem(command, "filename")->valuestring) + 2);
         sprintf(recievingStatus->filename, "%s/%s", folder_name, cJSON_GetObjectItem(command, "filename")->valuestring);
         recievingStatus->fileSize = atoi(cJSON_GetObjectItem(command, "filesize")->valuestring);
+        delteFileBeforeUpload(cJSON_GetObjectItem(command, "filename")->valuestring,ip);
+
         return;
     }
     struct stat folder = {0};
     // if there is a folder
-    printf("%s\n",cJSON_Print(command));
+    printf("%s\n", cJSON_Print(command));
     if (stat(folder_name, &folder) == -1)
     {
-        mkdir(folder_name, 0700); 
+        mkdir(folder_name, 0700);
     }
     cJSON *file_size = cJSON_GetObjectItem(command, "filesize");
-    
-    if(get_directory_size(folder_name)+atoi(file_size->valuestring)<=10240){
-    
-    char *response = "{\"status\":\"ready\", \"command\":\"upload\"}";
-    send(socket, response, strlen(response), 0);
+
+    if (get_directory_size(folder_name) + atoi(file_size->valuestring) <= (20*1024))
+    {
+
+        char *response = "{\"status\":\"ready\", \"command\":\"upload\"}";
+        send(socket, response, strlen(response), 0);
     }
-    else{
+    else
+    {
         char *response = "{\"status\":\"failed\", \"command\":\"upload\"}";
-     send(socket, response, strlen(response), 0);
+        send(socket, response, strlen(response), 0);
     }
     return;
 }
@@ -161,36 +194,39 @@ void send_file(int socket, char *filepath)
     return;
 }
 
-void send_fileNames_For_View(int socket,char* folder_name)
+void send_fileNames_For_View(int socket, char *folder_name)
 {
     // Open the folder
     DIR *dir = opendir(folder_name);
-    if (dir == NULL) {
+    if (dir == NULL)
+    {
         printf("Error opening directory for view file");
-        return ;
+        return;
     }
 
-    cJSON *root = cJSON_CreateObject();  // Create the root JSON object
+    cJSON *root = cJSON_CreateObject(); // Create the root JSON object
     struct dirent *entry;
     int count = 0;
 
     // Iterate through the directory entries
-     while ((entry = readdir(dir)) != NULL) {
+    while ((entry = readdir(dir)) != NULL)
+    {
         // Skip the current and parent directories
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+        {
             continue;
         }
 
         // Add the file/folder name to the JSON object
         char key[10];
-        sprintf(key, "%d", count);  // Convert count to a string for the key
-        cJSON_AddStringToObject(root, key, entry->d_name);  // Add the name only as the value
+        sprintf(key, "%d", count);                         // Convert count to a string for the key
+        cJSON_AddStringToObject(root, key, entry->d_name); // Add the name only as the value
         count++;
     }
-    char* temp=cJSON_Print(root);
-    printf("%s\n",temp);
+    char *temp = cJSON_Print(root);
+    printf("%s\n", temp);
     closedir(dir);
-    send(socket,temp,strlen(temp),0);
+    send(socket, temp, strlen(temp), 0);
     printf("Successfully sent string for view\n");
 }
 
@@ -203,7 +239,7 @@ void handel_download(int socket, cJSON *command, char *ip)
     if (access(folder_and_file_name, F_OK) == 0)
     {
         char download_response[256];
-         sprintf(download_response, "{\"status\":\"fetch\",\"command\":\"download\",\"filename\":\"%s\", \"filesize\":\"%i\"}", fileToCheck->valuestring, getFileSize(folder_and_file_name));
+        sprintf(download_response, "{\"status\":\"fetch\",\"command\":\"download\",\"filename\":\"%s\", \"filesize\":\"%i\"}", fileToCheck->valuestring, getFileSize(folder_and_file_name));
         send(socket, download_response, strlen(download_response), 0);
 
         send_file(socket, folder_and_file_name);
@@ -222,16 +258,16 @@ void handel_download(int socket, cJSON *command, char *ip)
     }
 }
 
-void handle_view(int socket,cJSON *command,char* ip)
+void handle_view(int socket, cJSON *command, char *ip)
 {
     char folder_name[1024];
     snprintf(folder_name, sizeof(folder_name), "./Server/Storage/%s", ip);
     char view_responce[256];
     // sending view responce to the client
-    sprintf(view_responce,"{\"command\":\"view\"}");
+    sprintf(view_responce, "{\"command\":\"view\"}");
     send(socket, view_responce, strlen(view_responce), 0);
     // sending filenames
-    send_fileNames_For_View(socket,folder_name);
+    send_fileNames_For_View(socket, folder_name);
     printf("Names of Files in folder sent to client successfully\n");
 }
 
@@ -301,9 +337,9 @@ void *client_handler_function(void *arg)
             {
                 handel_download(info->new_socket, jsonCommand, info->client_address);
             }
-            else if(commandType && strcmp(commandType->valuestring, "view") == 0)
+            else if (commandType && strcmp(commandType->valuestring, "view") == 0)
             {
-                handle_view(info->new_socket,jsonCommand,info->client_address);
+                handle_view(info->new_socket, jsonCommand, info->client_address);
             }
 
             cJSON_Delete(jsonCommand);
