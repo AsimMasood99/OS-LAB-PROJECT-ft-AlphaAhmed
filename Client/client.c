@@ -19,6 +19,13 @@ struct download_status
     int total_recieved;
 };
 
+struct creds
+{
+    int isLogedIn;
+    char *username;
+    char *password;
+};
+
 char *extract_filename(char *path)
 {
 
@@ -100,6 +107,7 @@ void recieve_file(char *content, struct download_status *DN, int bufferBytes)
         perror("Error opening file for writing");
     }
 }
+
 void handel_download(int clientSocket, cJSON *ServerResponse, struct download_status *downloading)
 {
     cJSON *status = cJSON_GetObjectItem(ServerResponse, "status");
@@ -115,7 +123,7 @@ void handel_download(int clientSocket, cJSON *ServerResponse, struct download_st
         downloading->isDownloading = 1;
         downloading->filename = Filename->valuestring;
         downloading->fileSize = atoi(Filesize->valuestring);
-        if(access(Filename->valuestring,F_OK)==0)
+        if (access(Filename->valuestring, F_OK) == 0)
         {
             remove(Filename->valuestring);
         }
@@ -169,6 +177,7 @@ int main()
     char buffer[1024];
 
     struct download_status downloadingFile = {0, NULL, 0, 0};
+    struct creds credentials = {0, NULL, NULL};
     client_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (client_socket < 0)
     {
@@ -195,6 +204,31 @@ int main()
         char command[256];
         char *parsedCommand = NULL;
         cJSON *parsedJsonCommand = NULL;
+        if (!credentials.isLogedIn)
+        {
+            int option;
+            printf("If you are already a user, Press 1\nIf you are a new user, Press 2\n");
+            scanf("%i", &option);
+            char username[100];
+            char password[100];
+            printf("Enter Username: ");
+            fgets(username, sizeof(username), stdin);
+            printf("Enter password: ");
+            fgets(password, sizeof(password), stdin);
+
+            if (option == 1)
+            {
+                sprintf(command, "{\"command\":\"login\",\"username\":\"%s\",\"password\":\"%s\"", username, password);
+                printf("%s\n", command);
+            }
+            else if (option == 2)
+            {
+                sprintf(command, "{\"command\":\"signin\",\"username\":\"%s\",\"password\":\"%s\"", username, password);
+                printf("%s\n", command);
+            }
+            send(client_socket,command,strlen(command),0);
+        }
+
         if (!downloadingFile.isDownloading)
         {
             printf("Enter Command: ");

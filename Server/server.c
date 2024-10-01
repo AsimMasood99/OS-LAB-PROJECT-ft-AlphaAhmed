@@ -124,21 +124,21 @@ void recieve_file(char *content, struct Recieving_File *RS, int bufferBytes)
     }
 }
 
-void delteFileBeforeUpload(char *filename,char* ip)
+void delteFileBeforeUpload(char *filename, char *ip)
 {
     char filepath[256] = "./Server/Storage/";
     strcat(filepath, ip);
     strcat(filepath, "/");
-    strcat(filepath,filename);
-    if(access(filepath,F_OK)==0)
+    strcat(filepath, filename);
+    if (access(filepath, F_OK) == 0)
     {
         remove(filepath);
         printf("DONE\n");
     }
-    else {
+    else
+    {
         printf("not accessed\n");
     }
-
 }
 
 void handel_upload(int socket, cJSON *command, struct Recieving_File *recievingStatus, char *ip)
@@ -153,7 +153,7 @@ void handel_upload(int socket, cJSON *command, struct Recieving_File *recievingS
         recievingStatus->filename = malloc(strlen(folder_name) + strlen(cJSON_GetObjectItem(command, "filename")->valuestring) + 2);
         sprintf(recievingStatus->filename, "%s/%s", folder_name, cJSON_GetObjectItem(command, "filename")->valuestring);
         recievingStatus->fileSize = atoi(cJSON_GetObjectItem(command, "filesize")->valuestring);
-        delteFileBeforeUpload(cJSON_GetObjectItem(command, "filename")->valuestring,ip);
+        delteFileBeforeUpload(cJSON_GetObjectItem(command, "filename")->valuestring, ip);
 
         return;
     }
@@ -166,7 +166,7 @@ void handel_upload(int socket, cJSON *command, struct Recieving_File *recievingS
     }
     cJSON *file_size = cJSON_GetObjectItem(command, "filesize");
 
-    if (get_directory_size(folder_name) + atoi(file_size->valuestring) <= (20*1024))
+    if (get_directory_size(folder_name) + atoi(file_size->valuestring) <= (20 * 1024))
     {
 
         char *response = "{\"status\":\"ready\", \"command\":\"upload\"}";
@@ -269,6 +269,16 @@ void handle_view(int socket, cJSON *command, char *ip)
     // sending filenames
     send_fileNames_For_View(socket, folder_name);
     printf("Names of Files in folder sent to client successfully\n");
+}
+
+void handel_login(cJSON *command)
+{
+    char *username = cJSON_GetObjectItem("username", command);
+    char *password = cJSON_GetObjectItem("password", command);
+
+    FILE *usersFIle = fopen("user.json", "rb");
+    char users[2048];
+    fseek()
 }
 
 void *client_handler_function(void *arg)
@@ -429,6 +439,8 @@ int main()
 
         for (int i = 0; i < NUM_THREADS; i++)
         {
+
+            // int res = pthread_tryjoin_np(threads[i], NULL); but not needed logic is implemented
             if (threadInfos[i].is_running == 1)
                 printf("Thread running No. %d", i);
             else
