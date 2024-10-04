@@ -146,9 +146,6 @@ void handle_upload(int socket, cJSON *command, struct Recieving_File *recievingS
 {
     char folder_name[256] = "./Server/Storage/";
     strcat(folder_name, username);
-    
-    printf("\n\n%s\n", username);
-    printf("%s\n", folder_name);
 
     cJSON *status = cJSON_GetObjectItem(command, "status");
     if (status && strcmp(status->valuestring, "incoming") == 0)
@@ -163,6 +160,7 @@ void handle_upload(int socket, cJSON *command, struct Recieving_File *recievingS
     }
     struct stat folder = {0};
     // if there is a folder
+    printf("%s\n", cJSON_Print(command));
     if (stat(folder_name, &folder) == -1)
     {
         mkdir(folder_name, 0700);
@@ -341,7 +339,7 @@ void *client_handler_function(void *arg)
         int bytes_received = 1;
 
         bytes_received = recv(info->new_socket, buffer, sizeof(buffer) - 1, 0);
-        printf("%s\n",buffer);
+
         if (bytes_received <= 0)
         {
             if (bytes_received == 0)
@@ -386,7 +384,6 @@ void *client_handler_function(void *arg)
             cJSON *commandType = cJSON_GetObjectItem(jsonCommand, "command");
             if (commandType && strcmp(commandType->valuestring, "upload") == 0)
             {
-                printf("username in upload: %s\n\n", info->username);
                 handle_upload(info->new_socket, jsonCommand, &receivingFile, info->username);
             }
             else if (commandType && strcmp(commandType->valuestring, "download") == 0)
@@ -400,7 +397,6 @@ void *client_handler_function(void *arg)
             else if (commandType && strcmp(commandType->valuestring, "login") == 0)
             {
                 handle_login(info->new_socket,jsonCommand,info);
-                printf("User name after login: %s\n\n", info->username);
             }
 
             cJSON_Delete(jsonCommand);
