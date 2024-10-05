@@ -310,7 +310,7 @@ void handle_login(int socket_id, cJSON *command, struct thread_info* thread)
 
     if (checkUserExistence(username, password, usersData))
     {
-        thread->username = username; 
+        thread->username = strdup(username); 
         strcpy(status, "{\"status\":\"success\",\"command\":\"login\"}");
     }
     else
