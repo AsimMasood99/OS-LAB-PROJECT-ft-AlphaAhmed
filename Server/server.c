@@ -13,9 +13,7 @@
 #define NUM_THREADS 10
 
 HashMap UserMap;
-int globalCountUsers=0;
 pthread_mutex_t UserMapLock;
-
 
 struct Recieving_File
 {

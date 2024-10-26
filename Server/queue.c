@@ -9,9 +9,10 @@ typedef struct
  
  char command;//v d u
  char filename[50]; 
- int filesize; // to be download and upload 
+ int filesize; 
+ int new_socket;
+ cJSON *JsonCommand;
  
-    //server socket 
     //other things
     //client socket
 

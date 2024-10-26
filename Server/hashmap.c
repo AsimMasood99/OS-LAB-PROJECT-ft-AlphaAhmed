@@ -6,10 +6,9 @@
 
 // Node structure for hash map entries
 typedef struct Node {
-    int key;
-    char user_id;
+    char * usernameid;
     Queue queue;
-    pthread_mutex_lock queueLock;
+    pthread_mutex_lock *qlock;
     
 } Node;
 // Hash map structure
@@ -27,6 +26,8 @@ Node* createNode(int key) {
     Node* newNode = (Node*)malloc(sizeof(Node));
     newNode->key = key;
     initQueue(&newNode->queue);  // Initialize queue for the node
+    newNode->qlock = malloc(sizeof(pthread_mutex_t));
+    pthread_mutex_init( newNode->qlock , NULL); 
     return newNode;
 }
 
@@ -37,22 +38,27 @@ void initHashMap(HashMap* map) {
     }
 }
 
-// Insert a key-value pair into the hash map
-void insert(HashMap* map, int key, data value) {
-    unsigned int index = hash(key);
-    Node* current = map->table[index];
+void insert(HashMap* map, data value,char *userid) {
 
-    // If the key already exists, enqueue the value
-    if (current != NULL) {
-            enqueue(&current->queue, value);
-            return;
+    int freeIndex=NULL;bool foundFree=false;
+    for(int i=0;i<TABLE_SIZE;i++){
+        Node* current = map->table[i];
+
+        if (current != NULL && current->usernameid==userid) {
+                enqueue(&current->queue, value);
+                return;
+        }
+        else if(current==NULL && foundFree==false){
+           freeIndex=i;
+           foundFree=true;
+        }
     }
    
     // If the key doesn't exist, create a new node
     Node* newNode = createNode(key);
     enqueue(&newNode->queue, value);
-    // Insert the new node at the head of the chain
-    map->table[index] = newNode;
+    newNode->usernameid=userid;
+    map->table[freeIndex] = newNode;
 }
 
 
