@@ -11,6 +11,7 @@
 #include <dirent.h>
 #define NUM_THREADS 10
 
+
 struct Recieving_File
 {
     int receiving;
@@ -25,7 +26,7 @@ struct thread_info
     int is_running;
     int new_socket;
     char *client_address;
-    char* username; // to store the logged in user;  
+    char *username; // to store the logged in user;
 };
 
 long get_file_size(const char *path)
@@ -146,7 +147,7 @@ void handle_upload(int socket, cJSON *command, struct Recieving_File *recievingS
 {
     char folder_name[256] = "./Server/Storage/";
     strcat(folder_name, username);
-    
+
     printf("\n\n%s\n", username);
     printf("%s\n", folder_name);
 
@@ -284,12 +285,11 @@ int checkUserExistence(char *username, char *password, cJSON *usersData)
         char *_password = cJSON_GetObjectItem(user, "password")->valuestring;
         if (strcmp(username, _username) == 0 && strcmp(username, _username) == 0)
             return 1;
-
     }
     return 0;
 }
 
-void handle_login(int socket_id, cJSON *command, struct thread_info* thread)
+void handle_login(int socket_id, cJSON *command, struct thread_info *thread)
 {
     char *username = cJSON_GetObjectItem(command, "username")->valuestring;
     char *password = cJSON_GetObjectItem(command, "password")->valuestring;
@@ -300,17 +300,17 @@ void handle_login(int socket_id, cJSON *command, struct thread_info* thread)
     char *Users = malloc(fileStat.st_size + 1);
 
     FILE *usersFile = fopen("./Server/user.json", "r");
-    
+
     Users[fileStat.st_size] = '\0';
     fread(Users, 1, fileStat.st_size, usersFile);
-   
+
     cJSON *usersData = cJSON_Parse(Users);
-   
+
     char *status = malloc(100);
 
     if (checkUserExistence(username, password, usersData))
     {
-        thread->username = strdup(username); 
+        thread->username = strdup(username);
         strcpy(status, "{\"status\":\"success\",\"command\":\"login\"}");
     }
     else
@@ -325,6 +325,40 @@ void handle_login(int socket_id, cJSON *command, struct thread_info* thread)
     cJSON_free(usersData);
 }
 
+void handle_sigin(int socket_id, cJSON *command, struct thread_info *thread)
+{
+    char *username = cJSON_GetObjectItem(command, "username")->valuestring;
+    char *password = cJSON_GetObjectItem(command, "password")->valuestring;
+
+    struct stat fileStat;
+
+    stat("./Server/user.json", &fileStat);
+    char *Users = malloc(fileStat.st_size + 1);
+
+    FILE *usersFile = fopen("./Server/user.json", "r");
+
+    Users[fileStat.st_size] = '\0';
+    fread(Users, 1, fileStat.st_size, usersFile);
+
+    cJSON *usersData = cJSON_Parse(Users);
+    cJSON *user = NULL;
+    char *status;
+    printf("hi\n");
+    cJSON_ArrayForEach(user, usersData)
+    {
+        if (strcmp(user->valuestring, username) == 0)
+        {
+            printf("checking: %s\n", user->valuestring);
+            status = strdup("{\"status\":\"failed\",\"command\":\"signin\"}");
+            send(socket_id, status, strlen(status), 0);
+        }
+    }
+    printf("%s", cJSON_Print(user));
+    // write in file the new user. ..
+    status = strdup("{\"status\":\"failed\",\"command\":\"signin\"}");
+    send(socket_id, status, strlen(status), 0);
+}
+
 void *client_handler_function(void *arg)
 {
     struct thread_info *info = (struct thread_info *)arg;
@@ -334,14 +368,13 @@ void *client_handler_function(void *arg)
     char buffer[1024];
     struct Recieving_File receivingFile = {0, NULL, 0, 0};
 
-    
     while (1)
     {
         memset(buffer, 0, sizeof(buffer));
         int bytes_received = 1;
 
         bytes_received = recv(info->new_socket, buffer, sizeof(buffer) - 1, 0);
-        printf("%s\n",buffer);
+        printf("%s\n", buffer);
         if (bytes_received <= 0)
         {
             if (bytes_received == 0)
@@ -386,7 +419,6 @@ void *client_handler_function(void *arg)
             cJSON *commandType = cJSON_GetObjectItem(jsonCommand, "command");
             if (commandType && strcmp(commandType->valuestring, "upload") == 0)
             {
-                printf("username in upload: %s\n\n", info->username);
                 handle_upload(info->new_socket, jsonCommand, &receivingFile, info->username);
             }
             else if (commandType && strcmp(commandType->valuestring, "download") == 0)
@@ -399,8 +431,11 @@ void *client_handler_function(void *arg)
             }
             else if (commandType && strcmp(commandType->valuestring, "login") == 0)
             {
-                handle_login(info->new_socket,jsonCommand,info);
-                printf("User name after login: %s\n\n", info->username);
+                handle_login(info->new_socket, jsonCommand, info);
+            }
+            else if (commandType && strcmp(commandType->valuestring, "signin") == 0)
+            {
+                handle_sigin(info->new_socket, jsonCommand, info);
             }
 
             cJSON_Delete(jsonCommand);
@@ -410,6 +445,7 @@ void *client_handler_function(void *arg)
 
 int main()
 {
+     
     pthread_t threads[NUM_THREADS];
     struct thread_info threadInfos[NUM_THREADS];
 
