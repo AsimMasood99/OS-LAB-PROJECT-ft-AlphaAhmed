@@ -7,10 +7,13 @@
 #include <arpa/inet.h>
 #include <cjson/cJSON.h>
 #include <sys/stat.h>
-#include <pthread.h>
 #include <dirent.h>
+#include "hashmap.c"
+
 #define NUM_THREADS 10
 
+HashMap UserMap;
+pthread_mutex_t UserMapLock;
 
 struct Recieving_File
 {
@@ -445,7 +448,7 @@ void *client_handler_function(void *arg)
 
 int main()
 {
-     
+    initHashMap(&map);
     pthread_t threads[NUM_THREADS];
     struct thread_info threadInfos[NUM_THREADS];
 
