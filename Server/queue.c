@@ -11,7 +11,6 @@ typedef struct
  char filename[50]; 
  int filesize; 
  int new_socket;
- cJSON *JsonCommand;
  
     //other things
     //client socket

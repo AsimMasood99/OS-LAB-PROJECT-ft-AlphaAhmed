@@ -362,6 +362,7 @@ void handle_sigin(int socket_id, cJSON *command, struct thread_info *thread)
     send(socket_id, status, strlen(status), 0);
 }
 
+
 void *client_handler_function(void *arg)
 {
     struct thread_info *info = (struct thread_info *)arg;
@@ -526,6 +527,7 @@ int main()
             perror("Error creating thread");
             return 1;
         }
+        
     }
 
     return 0;
