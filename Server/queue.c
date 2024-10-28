@@ -6,15 +6,14 @@
 
 typedef struct
 {
-
-    char command; // v d u
-    char filename[50];
-    int filesize;
-    int new_socket;
-    cJSON *JsonCommand;
-
-    // other things
-    // client socket
+ 
+ char command;//v d u
+ char filename[50]; 
+ int filesize; 
+ int new_socket;
+ 
+    //other things
+    //client socket
 
 } data;
 

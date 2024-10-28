@@ -2,12 +2,14 @@
 #include "queue.c"
 #include <pthread.h>
 
+#include <stdbool.h>
+
 // Node structure for hash map entries
 typedef struct Node
 {
     char *usernameid;
     Queue queue;
-    pthread_mutex *qlock;
+    pthread_mutex_t *qlock;
 
 } Node;
 // Hash map structure
@@ -23,10 +25,9 @@ unsigned int hash(int key)
 }
 
 // Function to create a new node
-Node *createNode(int key)
+Node *createNode()
 {
     Node *newNode = (Node *)malloc(sizeof(Node));
-    newNode->key = key;
     initQueue(&newNode->queue); // Initialize queue for the node
     newNode->qlock = malloc(sizeof(pthread_mutex_t));
     pthread_mutex_init(newNode->qlock, NULL);
@@ -64,7 +65,7 @@ void insert(HashMap *map, data value, char *userid)
     }
 
     // If the key doesn't exist, create a new node
-    Node *newNode = createNode(key);
+    Node *newNode = createNode();
     enqueue(&newNode->queue, value);
     newNode->usernameid = userid;
     map->table[freeIndex] = newNode;
@@ -77,7 +78,7 @@ void displayHashMap(HashMap *map)
     {
         printf("Index %d: ", i);
         Node *current = map->table[i];
-        print("%s", current->user_id);
+        print("%s", current->usernameid);
         displayQueue(&(current->queue));
     }
 }
