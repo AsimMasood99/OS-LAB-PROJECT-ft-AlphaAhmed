@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include "queue.c"
 #include <pthread.h>
-
 #include <stdbool.h>
 
 // Node structure for hash map entries

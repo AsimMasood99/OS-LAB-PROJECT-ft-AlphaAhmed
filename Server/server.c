@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <pthread.h>
-// #include "hashmap.c"
+
 
 #define NUM_THREADS 10
 
