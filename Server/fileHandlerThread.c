@@ -6,9 +6,11 @@ typedef struct
 {
     char *username;
     int rwFlag;
+    char *filename;
 } Job;
 
 const int MaxQueueSize = 128;
+
 typedef struct
 {
     int front;
@@ -20,6 +22,13 @@ typedef struct
 } JobQueue;
 
 JobQueue tasks;
+
+typedef struct
+{
+    Job Task;
+    int suspended;
+    pthread_t thread;
+} Thread;
 
 void addTask(Job task)
 {
@@ -37,16 +46,26 @@ void addTask(Job task)
     sem_post(&tasks.full);
 }
 
-void *read() {}
-void *write() {}
+void *ReadWrite() {}
+
+void initThreadPoll(Thread threads[])
+{
+    for (int i = 0; i < MaxQueueSize; i++)
+    {
+        threads[i].suspended = 1;
+        pthread_create(&threads[i].thread, NULL, ReadWrite, (void *)args); // Not sure what to send here rn.
+    }
+}
 
 fileHandler(void *args)
 {
-
     sem_init(&tasks.empty, 0, MaxQueueSize);
     sem_init(&tasks.full, 0, 0);
     HashMap threadsMap;
-    pthread_t threads[128];
+    Thread threads[MaxQueueSize];
+
+    initThreadPoll(threads);
+
     while (1)
     {
         sem_wait(&tasks.full);
@@ -55,7 +74,7 @@ fileHandler(void *args)
         tasks.tail = (tasks.tail + 1) % MaxQueueSize;
         pthread_mutex_unlock(&tasks.mutex);
         sem_post(&tasks.empty);
-
+        // ThreadsMap wala kam yahan ho ga.
         if (TaskToRun.rwFlag == 0)
         {
             pthread_create(thread[freeIndex], NULL, read, (void *)(args));
