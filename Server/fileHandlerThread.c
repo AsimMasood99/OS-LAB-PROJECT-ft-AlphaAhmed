@@ -1,6 +1,7 @@
 #include "hashmap.c"
 #include <pthread.h>
 #include <semaphore.h>
+#include "tasksMap.h"
 
 typedef struct
 {
@@ -75,12 +76,6 @@ fileHandler(void *args)
         pthread_mutex_unlock(&tasks.mutex);
         sem_post(&tasks.empty);
         // ThreadsMap wala kam yahan ho ga.
-        if (TaskToRun.rwFlag == 0)
-        {
-            pthread_create(thread[freeIndex], NULL, read, (void *)(args));
-        }
-        else
-            pthread_create(thread[freeIndex], NULL, write, (void *)(args));
     }
 }
 

@@ -3,7 +3,6 @@
 #include <pthread.h>
 #include <stdbool.h>
 
-// Node structure for hash map entries
 typedef struct Node
 {
     char *usernameid;
@@ -11,7 +10,7 @@ typedef struct Node
     pthread_mutex_t *qlock;
 
 } Node;
-// Hash map structure
+
 typedef struct HashMap
 {
     Node *table[TABLE_SIZE];
