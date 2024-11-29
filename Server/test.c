@@ -144,9 +144,7 @@ void handle_upload(int socket, cJSON *command, struct Recieving_File *recievingS
         task.completed = 0;
         addTask(&task);
 
-        while (task.completed == 0) {
-        };
-        printf("Operation Successful\n");
+        while(!task.completed){};
         return;
     }
     struct stat folder = {0};
@@ -220,16 +218,7 @@ void handle_download(int socket, cJSON *command, char *username) {
         sprintf(download_response, "{\"status\":\"fetch\",\"command\":\"download\",\"filename\":\"%s\", \"filesize\":\"%i\"}", fileToCheck->valuestring, getFileSize(folder_and_file_name));
         send(socket, download_response, strlen(download_response), 0);
 
-        Data task; 
-        task.completed = 0; 
-        task.filename = folder_and_file_name;
-        task.fileSize = -1;
-        task.rwFlag = 0; 
-        task.socket = socket;
-        task.username = username;
-        addTask(&task);
-        while(task.completed == 0){};
-        // send_file(socket, folder_and_file_name);
+        send_file(socket, folder_and_file_name);
         char *completion_Msg = "{\"status\":\"success\"}";
         printf("File uploaded Successfully\n");
 

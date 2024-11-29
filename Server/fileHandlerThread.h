@@ -48,6 +48,15 @@ void addTask(Data *task) {
 void *Read(void *args) {
     Data *dt = (Data *)args;
     printf("Read thread executed \n");
+    char stream[1024];
+    FILE *file = fopen(dt->filename, "rb");
+
+    while (fgets(stream, 1024, file) != NULL) {
+        send(dt->socket, stream, strlen(stream), 0);
+    }
+
+    fclose(file);
+    dt->completed = 1;
 }
 
 void *Write(void *args) {
@@ -57,8 +66,7 @@ void *Write(void *args) {
     Data *data = (Data *)args;
     int bytes_received = 0;
     int total_recieved = 0;
-    printf("%s\n", data->filename);
-    printf("File size: %d\n", data->fileSize);
+    // printf("File size: %d\n", data->fileSize);
     while (1) {
         memset(buffer, 0, bufferSize);
         bytes_received = recv(data->socket, buffer, bufferSize - 1, 0);
@@ -69,7 +77,7 @@ void *Write(void *args) {
         }
         if (file && total_recieved < data->fileSize) {
             // printf("%i, %i, %i\n", RS->fileSize, RS->total_recieved, bufferBytes);
-            printf("%s", buffer);
+            // printf("%s", buffer);
             int remaining = data->fileSize - total_recieved;
             int bytes_to_write = (remaining < bytes_received) ? remaining : bytes_received;
 
@@ -103,6 +111,7 @@ void *fileHandler(void *args) {
 
         pthread_t thread;
         if (TaskToRun->rwFlag == 0) {
+            printf("hello\n");
             pthread_create(&thread, NULL, Read, (void *)TaskToRun);  // Data loose ho ga ider ..
         } else {
             pthread_create(&thread, NULL, Write, (void *)TaskToRun);  // Idher bhi ..
