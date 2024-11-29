@@ -121,32 +121,33 @@ void delteFileBeforeUpload(char *filename, char *username) {
     }
 }
 
-void handle_upload(int socket, cJSON *command, struct Recieving_File *recievingStatus, char *username) {
+void handle_upload(int socket, cJSON *command, char *username) {
     char folder_name[256] = "./Server/Storage/";
     strcat(folder_name, username);
 
-    printf("\n\n%s\n", username);
-    printf("%s\n", folder_name);
+    // printf("\n\n%s\n", username);
+    // printf("%s\n", folder_name);
 
     cJSON *status = cJSON_GetObjectItem(command, "status");
+
     if (status && strcmp(status->valuestring, "incoming") == 0) {
-        // recievingStatus->receiving = 1;
-        recievingStatus->filename = malloc(strlen(folder_name) + strlen(cJSON_GetObjectItem(command, "filename")->valuestring) + 2);
-        sprintf(recievingStatus->filename, "%s/%s", folder_name, cJSON_GetObjectItem(command, "filename")->valuestring);
-        recievingStatus->fileSize = atoi(cJSON_GetObjectItem(command, "filesize")->valuestring);
+        char *filePath = malloc(strlen(folder_name) + strlen(cJSON_GetObjectItem(command, "filename")->valuestring) + 2);
+        sprintf(filePath, "%s/%s", folder_name, cJSON_GetObjectItem(command, "filename")->valuestring);
         delteFileBeforeUpload(cJSON_GetObjectItem(command, "filename")->valuestring, username);
         Data task;
         task.rwFlag = 1;
         task.socket = socket;
-        task.filename = recievingStatus->filename;
+        task.filename = filePath;
         task.username = username;
-        task.fileSize = recievingStatus->fileSize;
+        task.fileSize = atoi(cJSON_GetObjectItem(command, "filesize")->valuestring);
+
         task.completed = 0;
         addTask(&task);
 
         while (task.completed == 0) {
         };
         printf("Operation Successful\n");
+        free(filePath);
         return;
     }
     struct stat folder = {0};
@@ -220,15 +221,16 @@ void handle_download(int socket, cJSON *command, char *username) {
         sprintf(download_response, "{\"status\":\"fetch\",\"command\":\"download\",\"filename\":\"%s\", \"filesize\":\"%i\"}", fileToCheck->valuestring, getFileSize(folder_and_file_name));
         send(socket, download_response, strlen(download_response), 0);
 
-        Data task; 
-        task.completed = 0; 
+        Data task;
+        task.completed = 0;
         task.filename = folder_and_file_name;
         task.fileSize = -1;
-        task.rwFlag = 0; 
+        task.rwFlag = 0;
         task.socket = socket;
         task.username = username;
         addTask(&task);
-        while(task.completed == 0){};
+        while (task.completed == 0) {
+        };
         // send_file(socket, folder_and_file_name);
         char *completion_Msg = "{\"status\":\"success\"}";
         printf("File uploaded Successfully\n");
@@ -355,10 +357,7 @@ void handle_signup(int socket_id, cJSON *command, struct thread_info *thread) {
 void *client_handler_function(void *arg) {
     struct thread_info *info = (struct thread_info *)arg;
     info->is_running = 1;
-    // char buffer[1024] , int file_bytes ,struct Recieving_File receivingFile ,
-
     char buffer[1024];
-    struct Recieving_File receivingFile = {0, NULL, 0, 0};
 
     while (1) {
         memset(buffer, 0, sizeof(buffer));
@@ -380,38 +379,38 @@ void *client_handler_function(void *arg) {
 
         buffer[bytes_received] = '\0';
 
-        if (receivingFile.receiving) {
-            recieve_file(buffer, &receivingFile, bytes_received);
+        // if (receivingFile.receiving) {
+        //     recieve_file(buffer, &receivingFile, bytes_received);
 
-            if (strstr(buffer, "{\"status\":\"success\"}")) {
-                receivingFile.receiving = 0;
-                receivingFile.fileSize = 0;
-                receivingFile.total_recieved = 0;
-                continue;
-            }
-        }  // this else if is for sending file to the client
-        else {
-            cJSON *jsonCommand = cJSON_Parse(buffer);
-            if (jsonCommand == NULL) {
-                printf("Invalid JSON received\n");
-                continue;
-            }
-
-            cJSON *commandType = cJSON_GetObjectItem(jsonCommand, "command");
-            if (commandType && strcmp(commandType->valuestring, "upload") == 0) {
-                handle_upload(info->new_socket, jsonCommand, &receivingFile, info->username);
-            } else if (commandType && strcmp(commandType->valuestring, "download") == 0) {
-                handle_download(info->new_socket, jsonCommand, info->username);
-            } else if (commandType && strcmp(commandType->valuestring, "view") == 0) {
-                handle_view(info->new_socket, jsonCommand, info->username);
-            } else if (commandType && strcmp(commandType->valuestring, "login") == 0) {
-                handle_login(info->new_socket, jsonCommand, info);
-            } else if (commandType && strcmp(commandType->valuestring, "signin") == 0) {
-                handle_signup(info->new_socket, jsonCommand, info);
-            }
-
-            cJSON_Delete(jsonCommand);
+        //     if (strstr(buffer, "{\"status\":\"success\"}")) {
+        //         receivingFile.receiving = 0;
+        //         receivingFile.fileSize = 0;
+        //         receivingFile.total_recieved = 0;
+        //         continue;
+        //     }
+        // }  // this else if is for sending file to the client
+        // else {
+        cJSON *jsonCommand = cJSON_Parse(buffer);
+        if (jsonCommand == NULL) {
+            printf("Invalid JSON received\n");
+            continue;
         }
+
+        cJSON *commandType = cJSON_GetObjectItem(jsonCommand, "command");
+        if (commandType && strcmp(commandType->valuestring, "upload") == 0) {
+            handle_upload(info->new_socket, jsonCommand, info->username);
+        } else if (commandType && strcmp(commandType->valuestring, "download") == 0) {
+            handle_download(info->new_socket, jsonCommand, info->username);
+        } else if (commandType && strcmp(commandType->valuestring, "view") == 0) {
+            handle_view(info->new_socket, jsonCommand, info->username);
+        } else if (commandType && strcmp(commandType->valuestring, "login") == 0) {
+            handle_login(info->new_socket, jsonCommand, info);
+        } else if (commandType && strcmp(commandType->valuestring, "signin") == 0) {
+            handle_signup(info->new_socket, jsonCommand, info);
+        }
+
+        cJSON_Delete(jsonCommand);
+        // }
     }
 }
 

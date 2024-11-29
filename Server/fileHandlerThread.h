@@ -66,7 +66,6 @@ void *Write(void *args) {
     Data *data = (Data *)args;
     int bytes_received = 0;
     int total_recieved = 0;
-    // printf("File size: %d\n", data->fileSize);
     while (1) {
         memset(buffer, 0, bufferSize);
         bytes_received = recv(data->socket, buffer, bufferSize - 1, 0);
@@ -76,8 +75,6 @@ void *Write(void *args) {
             perror("Error in openinig file: ");
         }
         if (file && total_recieved < data->fileSize) {
-            // printf("%i, %i, %i\n", RS->fileSize, RS->total_recieved, bufferBytes);
-            // printf("%s", buffer);
             int remaining = data->fileSize - total_recieved;
             int bytes_to_write = (remaining < bytes_received) ? remaining : bytes_received;
 
@@ -102,7 +99,6 @@ void *fileHandler(void *args) {
     Thread threads[MaxQueueSize];
 
     while (1) {
-        printf("File handler loop \n");
         sem_wait(&tasks.full);
         pthread_mutex_lock(&tasks.mutex);
         Data *TaskToRun = tasks.queue[tasks.tail];  // Check for possiblites of data corruption.
@@ -113,7 +109,6 @@ void *fileHandler(void *args) {
 
         pthread_t thread;
         if (TaskToRun->rwFlag == 0) {
-            printf("hello\n");
             pthread_create(&thread, NULL, Read, (void *)TaskToRun);  // Data loose ho ga ider ..
         } else {
             pthread_create(&thread, NULL, Write, (void *)TaskToRun);  // Idher bhi ..
