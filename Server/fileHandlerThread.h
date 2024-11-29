@@ -38,7 +38,7 @@ void addTask(Data *task) {
     // tasks.queue[tasks.front].socket = task->socket;
     // tasks.queue[tasks.front].fileSize = task->fileSize;
     // tasks.queue[tasks.front].completed =
-    // tasks.front = (tasks.front + 1) % MaxQueueSize;
+    tasks.front = (tasks.front + 1) % MaxQueueSize;
     printf("Task Scheduled \n");
     pthread_mutex_unlock(&tasks.mutex);
 
@@ -96,6 +96,8 @@ void *Write(void *args) {
 void *fileHandler(void *args) {
     sem_init(&tasks.empty, 0, MaxQueueSize);
     sem_init(&tasks.full, 0, 0);
+    tasks.front = 0;
+    tasks.tail = 0;
     // HashMap threadsMap;
     Thread threads[MaxQueueSize];
 
