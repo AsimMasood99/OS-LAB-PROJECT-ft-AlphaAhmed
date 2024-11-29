@@ -141,12 +141,10 @@ void handle_upload(int socket, cJSON *command, struct Recieving_File *recievingS
         task.filename = recievingStatus->filename;
         task.username = username;
         task.fileSize = recievingStatus->fileSize;
-        printf("%d\n\n", task.fileSize);
         task.completed = 0;
         addTask(&task);
 
-        while(task.completed==0){};
-        printf("%d\n",task.completed);
+        while(!task.completed){};
         return;
     }
     struct stat folder = {0};

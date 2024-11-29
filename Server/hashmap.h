@@ -1,7 +1,9 @@
 #include <stdio.h>
-#include "queue.c"
+#include "queue.h"
 #include <pthread.h>
 #include <stdbool.h>
+
+#define TABLE_SIZE 1024
 
 typedef struct Node
 {
@@ -10,7 +12,7 @@ typedef struct Node
     pthread_mutex_t *qlock;
 
 } Node;
-
+    
 typedef struct HashMap
 {
     Node *table[TABLE_SIZE];
@@ -41,7 +43,7 @@ void initHashMap(HashMap *map)
     }
 }
 
-void insert(HashMap *map, data value, char *userid)
+void insert(HashMap *map, Data value, char *userid)
 {
 
     int freeIndex = NULL;
