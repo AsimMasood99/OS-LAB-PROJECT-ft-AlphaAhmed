@@ -10,7 +10,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../malloc/malloc.h"
 #include "fileHandlerThread.h"
 
 #define NUM_THREADS 10
@@ -122,34 +121,30 @@ void delteFileBeforeUpload(char *filename, char *username) {
     }
 }
 
-void handle_upload(int socket, cJSON *command, char *username) {
+void handle_upload(int socket, cJSON *command, struct Recieving_File *recievingStatus, char *username) {
     char folder_name[256] = "./Server/Storage/";
     strcat(folder_name, username);
 
-    // printf("\n\n%s\n", username);
-    // printf("%s\n", folder_name);
+    printf("\n\n%s\n", username);
+    printf("%s\n", folder_name);
 
     cJSON *status = cJSON_GetObjectItem(command, "status");
-
     if (status && strcmp(status->valuestring, "incoming") == 0) {
-        int mindex = C_malloc(strlen(folder_name) + strlen(cJSON_GetObjectItem(command, "filename")->valuestring) + 2);
-        char *filePath = (char *)(Blocks_Register->arr[mindex]) + sizeof(DynamicBlock);
-        sprintf(filePath, "%s/%s", folder_name, cJSON_GetObjectItem(command, "filename")->valuestring);
+        // recievingStatus->receiving = 1;
+        recievingStatus->filename = malloc(strlen(folder_name) + strlen(cJSON_GetObjectItem(command, "filename")->valuestring) + 2);
+        sprintf(recievingStatus->filename, "%s/%s", folder_name, cJSON_GetObjectItem(command, "filename")->valuestring);
+        recievingStatus->fileSize = atoi(cJSON_GetObjectItem(command, "filesize")->valuestring);
         delteFileBeforeUpload(cJSON_GetObjectItem(command, "filename")->valuestring, username);
         Data task;
         task.rwFlag = 1;
         task.socket = socket;
-        task.filename = filePath;
+        task.filename = recievingStatus->filename;
         task.username = username;
-        task.fileSize = atoi(cJSON_GetObjectItem(command, "filesize")->valuestring);
-
+        task.fileSize = recievingStatus->fileSize;
         task.completed = 0;
         addTask(&task);
 
-        while (task.completed == 0) {
-        };
-        printf("Operation Successful\n");
-        // C_Free(mindex);
+        while(!task.completed){};
         return;
     }
     struct stat folder = {0};
@@ -223,17 +218,7 @@ void handle_download(int socket, cJSON *command, char *username) {
         sprintf(download_response, "{\"status\":\"fetch\",\"command\":\"download\",\"filename\":\"%s\", \"filesize\":\"%i\"}", fileToCheck->valuestring, getFileSize(folder_and_file_name));
         send(socket, download_response, strlen(download_response), 0);
 
-        Data task;
-        task.completed = 0;
-        task.filename = folder_and_file_name;
-        task.fileSize = -1;
-        task.rwFlag = 0;
-        task.socket = socket;
-        task.username = username;
-        addTask(&task);
-        while (task.completed == 0) {
-        };
-        // send_file(socket, folder_and_file_name);
+        send_file(socket, folder_and_file_name);
         char *completion_Msg = "{\"status\":\"success\"}";
         printf("File uploaded Successfully\n");
 
@@ -277,12 +262,10 @@ void handle_login(int socket_id, cJSON *command, struct thread_info *thread) {
     char *password = cJSON_GetObjectItem(command, "password")->valuestring;
 
     struct stat fileStat;
-    int mindx = C_malloc(100);
-    char *status = (char *)(Blocks_Register->arr[mindx]) + sizeof(DynamicBlock);
+    char *status = malloc(100);
 
     stat("./Server/user.json", &fileStat);
-    int mindx2 = C_malloc(fileStat.st_size + 1);
-    char *Users = (char *)(Blocks_Register->arr[mindx2]) + sizeof(DynamicBlock);
+    char *Users = malloc(fileStat.st_size + 1);
     FILE *usersFile = fopen("./Server/user.json", "r");
     if (fileStat.st_size == 0) {
         printf("File Empty");
@@ -304,9 +287,8 @@ void handle_login(int socket_id, cJSON *command, struct thread_info *thread) {
 
     send(socket_id, status, strlen(status), 0);
     fclose(usersFile);
-
-    // C_Free(mindx);
-    // C_Free(mindx2);
+    free(Users);
+    free(status);
     cJSON_free(usersData);
 }
 
@@ -317,27 +299,23 @@ void handle_signup(int socket_id, cJSON *command, struct thread_info *thread) {
     struct stat fileStat;
 
     stat("./Server/user.json", &fileStat);
-    int mindx2 = C_malloc(fileStat.st_size + 1);
-    char *Users = (char *)(Blocks_Register->arr[mindx2]) + sizeof(DynamicBlock);
+    char *Users = malloc(fileStat.st_size + 1);
 
     FILE *usersFile = fopen("./Server/user.json", "rb");
     if (!usersFile) {
         perror("Failed to open user.json");
-        // C_Free(Users);
+        free(Users);
         return;
     }
     fread(Users, 1, fileStat.st_size, usersFile);
     Users[fileStat.st_size] = '\0';
-
     fclose(usersFile);
     cJSON *usersData = NULL;
     cJSON *user = NULL;
-    // int mindx = C_malloc(100);
     char *status;
 
     if (fileStat.st_size > 0) {
         usersData = cJSON_Parse(Users);
-
         cJSON_ArrayForEach(user, usersData) {
             cJSON *existingUsername = cJSON_GetObjectItem(user, "username");
             if (strcmp(existingUsername->valuestring, username) == 0) {
@@ -349,27 +327,28 @@ void handle_signup(int socket_id, cJSON *command, struct thread_info *thread) {
     } else {
         usersData = cJSON_CreateArray();
     }
-
     user = cJSON_CreateObject();
     cJSON_AddStringToObject(user, "username", username);
     cJSON_AddStringToObject(user, "password", password);
 
     cJSON_AddItemToArray(usersData, user);
-    FILE *userFileWrite = fopen("./Server/user.json", "wb");
+    FILE *userFileWrite = fopen("/home/asim/Documents/OS_Project/Server/user.json", "wb");
 
     char *updatedData = cJSON_Print(usersData);
     fwrite(updatedData, 1, strlen(updatedData), userFileWrite);
     fclose(userFileWrite);
-    printf("hree\n");
     status = strdup("{\"status\":\"success\",\"command\":\"login\"}");
     send(socket_id, status, strlen(status), 0);
-
 }
 
 void *client_handler_function(void *arg) {
     struct thread_info *info = (struct thread_info *)arg;
     info->is_running = 1;
+    // char buffer[1024] , int file_bytes ,struct Recieving_File receivingFile ,
+
     char buffer[1024];
+    struct Recieving_File receivingFile = {0, NULL, 0, 0};
+
     while (1) {
         memset(buffer, 0, sizeof(buffer));
         int bytes_received = 1;
@@ -390,51 +369,42 @@ void *client_handler_function(void *arg) {
 
         buffer[bytes_received] = '\0';
 
-        // if (receivingFile.receiving) {
-        //     recieve_file(buffer, &receivingFile, bytes_received);
+        if (receivingFile.receiving) {
+            recieve_file(buffer, &receivingFile, bytes_received);
 
-        //     if (strstr(buffer, "{\"status\":\"success\"}")) {
-        //         receivingFile.receiving = 0;
-        //         receivingFile.fileSize = 0;
-        //         receivingFile.total_recieved = 0;
-        //         continue;
-        //     }
-        // }  // this else if is for sending file to the client
-        // else {
-        cJSON *jsonCommand = cJSON_Parse(buffer);
-        if (jsonCommand == NULL) {
-            printf("Invalid JSON received\n");
-            continue;
+            if (strstr(buffer, "{\"status\":\"success\"}")) {
+                receivingFile.receiving = 0;
+                receivingFile.fileSize = 0;
+                receivingFile.total_recieved = 0;
+                continue;
+            }
+        }  // this else if is for sending file to the client
+        else {
+            cJSON *jsonCommand = cJSON_Parse(buffer);
+            if (jsonCommand == NULL) {
+                printf("Invalid JSON received\n");
+                continue;
+            }
+
+            cJSON *commandType = cJSON_GetObjectItem(jsonCommand, "command");
+            if (commandType && strcmp(commandType->valuestring, "upload") == 0) {
+                handle_upload(info->new_socket, jsonCommand, &receivingFile, info->username);
+            } else if (commandType && strcmp(commandType->valuestring, "download") == 0) {
+                handle_download(info->new_socket, jsonCommand, info->username);
+            } else if (commandType && strcmp(commandType->valuestring, "view") == 0) {
+                handle_view(info->new_socket, jsonCommand, info->username);
+            } else if (commandType && strcmp(commandType->valuestring, "login") == 0) {
+                handle_login(info->new_socket, jsonCommand, info);
+            } else if (commandType && strcmp(commandType->valuestring, "signin") == 0) {
+                handle_signup(info->new_socket, jsonCommand, info);
+            }
+
+            cJSON_Delete(jsonCommand);
         }
-
-        cJSON *commandType = cJSON_GetObjectItem(jsonCommand, "command");
-        if (commandType && strcmp(commandType->valuestring, "upload") == 0) {
-            handle_upload(info->new_socket, jsonCommand, info->username);
-        } else if (commandType && strcmp(commandType->valuestring, "download") == 0) {
-            handle_download(info->new_socket, jsonCommand, info->username);
-        } else if (commandType && strcmp(commandType->valuestring, "view") == 0) {
-            handle_view(info->new_socket, jsonCommand, info->username);
-        } else if (commandType && strcmp(commandType->valuestring, "login") == 0) {
-            handle_login(info->new_socket, jsonCommand, info);
-        } else if (commandType && strcmp(commandType->valuestring, "signin") == 0) {
-            handle_signup(info->new_socket, jsonCommand, info);
-        }
-
-        cJSON_Delete(jsonCommand);
-        // }
     }
 }
 
 int main() {
-    // Init malloc //
-    Blocks_Register = (DynamicArray *)malloc(sizeof(DynamicArray));
-
-    // initializing the global block register
-    initArray(Blocks_Register, 1 * 1024);             // array to keep the poiters is 1kb
-    allocateArena(Blocks_Register, 5 * 1024 * 1024);  // but actual arena is 5MB
-
-    // init server //
-
     int server_socket, new_socket, client_addr_len;
     struct sockaddr_in server_addr, client_addr;
 

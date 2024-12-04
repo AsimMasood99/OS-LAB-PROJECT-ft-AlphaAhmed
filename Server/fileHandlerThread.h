@@ -50,7 +50,6 @@ void *Read(void *args) {
     printf("Read thread executed \n");
     char stream[1024];
     FILE *file = fopen(dt->filename, "rb");
-
     while (fgets(stream, 1024, file) != NULL) {
         send(dt->socket, stream, strlen(stream), 0);
     }
@@ -61,14 +60,15 @@ void *Read(void *args) {
 
 void *Write(void *args) {
     printf("Write thread executed \n");
-    int bufferSize = 1024;
-    char *buffer = malloc(bufferSize);
+    int mindx = C_malloc(1024);
+    char *buffer = (char *)(Blocks_Register->arr[mindx]) + sizeof(DynamicBlock);
+
     Data *data = (Data *)args;
     int bytes_received = 0;
     int total_recieved = 0;
     while (1) {
-        memset(buffer, 0, bufferSize);
-        bytes_received = recv(data->socket, buffer, bufferSize - 1, 0);
+        memset(buffer, 0, 1024);
+        bytes_received = recv(data->socket, buffer, 1024 - 1, 0);
         buffer[bytes_received] = '\0';
         FILE *file = fopen(data->filename, "ab");
         if (!file) {
@@ -87,7 +87,7 @@ void *Write(void *args) {
         }
     }
     data->completed = 1;
-    free(buffer);
+    // C_free(buffer);
 }
 
 void *fileHandler(void *args) {
