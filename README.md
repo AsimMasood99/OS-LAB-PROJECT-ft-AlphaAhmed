@@ -1,4 +1,2 @@
 
-# A METHOD OR A CLASS SHOULD ONLY DO WHAT IT IS SUPPOSED TO DO AND NOTHING ELSE
-
-## Please Follow this rule to make your's (Ahmed and Tayyab) and mine(Asim) life easier. 
+# I here by declare this porject unmaintained and abandoned. (I have had enough of segmentaion faults)
