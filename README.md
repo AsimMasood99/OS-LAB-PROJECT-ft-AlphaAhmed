@@ -1,2 +1,1 @@
-
-# I here by declare this porject unmaintained and abandoned. (I have had enough of segmentaion faults)
+# A multithreaded file storage server in C, inspired by cloud storage systems.
